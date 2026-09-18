@@ -597,6 +597,7 @@
             style="width:100%;padding:9px;border-radius:10px;border:1px solid var(--line);font-family:inherit"></select>
     <div class="row eq" style="margin-top:10px">
       <button class="btn o sm" id="aiOnBtn" onclick="aiToggle()">مفعّل — أوقفه</button>
+      <button class="btn o sm" id="aiWebBtn" onclick="chatAction('web','')">🌐 البحث في الإنترنت</button>
       <button class="btn o sm r" onclick="aiClearKey()">🗑 احذف المفتاح</button>
     </div>
     <div class="note" style="margin-top:12px"><b>اقرأ هذا قبل الاستخدام</b>
@@ -1967,6 +1968,8 @@ function chatAction(a, v){
   if(a === 'ai') return openModal('mdAI');
   if(a === 'more') return tutorDeeper(v);
   if(a === 'add') return myWordAdd(v);
+  if(a === 'retry') return tutorAsk(v);
+  if(a === 'web'){ state.set.aiWeb = state.set.aiWeb === 0 ? 1 : 0; save(); aiPaint(); toast(state.set.aiWeb === 0 ? 'أُوقف البحث في الإنترنت' : 'فُعّل البحث في الإنترنت'); return; }
   if(a === 'clear'){ state.chat = []; save(); paintChat(); return; }
 }
 function tutorFromContext(){
@@ -2050,7 +2053,7 @@ const AI_PROVIDERS = {
       const gc = { temperature: opts.temp == null ? 0.4 : opts.temp, maxOutputTokens: opts.max || 700 };
       if(opts.schema){ gc.responseMimeType = 'application/json'; gc.responseSchema = opts.schema; }
       const req = { systemInstruction: sys ? { parts: [{ text: sys }] } : undefined, contents: contents, generationConfig: gc };
-      if(opts.web && !opts.schema) req.tools = [{ google_search: {} }];
+      if(opts.web && !opts.schema && state.set.aiWeb !== 0) req.tools = [{ google_search: {} }];
       return req;
     },
     parse: function(j){
@@ -2184,7 +2187,7 @@ function chatFmt(t){
 const AI_ERRS = {
   nokey:  'فعّل المعلّم الذكي أولًا من الإعدادات ⚙ ليجيب عن الأسئلة المفتوحة.',
   offline:'لا يوجد اتصال بالإنترنت الآن — هذه إجابتي من دروسك المحفوظة:',
-  quota:  'انتهت حصّتك المجانية اليوم عند جوجل، وتتجدّد تلقائيًا. هذه إجابتي من دروسك:',
+  quota:  'رفضت جوجل الطلب لتجاوز حدّ (قد يكون حدّ الدقيقة أو حصّة اليوم — انظر السطر الإنجليزي). تتجدّد بعد منتصف الليل بتوقيت المحيط الهادئ، وأحيانًا يكفي الانتظار دقيقة. هذه إجابتي من دروسك:',
   cap:    'وصلت حدّ الاستخدام اليومي الذي ضبطناه للأمان. هذه إجابتي من دروسك:',
   badkey: 'المفتاح غير صالح أو منتهي — افتح الإعدادات ⚙ وأعد لصقه.',
   model:  'النموذج المختار غير متاح لمفتاحك — افتح الإعدادات ⚙ واضغط «اختبر المفتاح» لاختيار نموذج متاح.',
@@ -2246,8 +2249,9 @@ function tutorAsk(q){
       const m = AI_ERRS[e && e.code] || AI_ERRS.http;
       chatAdd('a', '<p>' + esc(m) + '</p>'
         + ((e && e.detail) ? '<div class="tles" dir="ltr">' + esc(e.detail) + '</div>' : '') + off
+        + '<div class="trow">' + actBtn('🔄 أعد المحاولة', 'retry', t)
         + ((e && (e.code === 'badkey' || e.code === 'model' || e.code === 'nokey'))
-            ? '<div class="trow">' + actBtn('⚙ افتح الإعدادات', 'ai', '') + '</div>' : ''));
+            ? actBtn('⚙ افتح الإعدادات', 'ai', '') : '') + '</div>');
     });
   }catch(e){
     try{ chatAdd('a', '<p>صار خطأ بسيط عندي. جرّب صياغة أخرى أو اكتب «مساعدة».</p>'); }catch(_){}
@@ -2275,6 +2279,8 @@ function aiPaint(){
   if(inp && !inp.value && k) inp.value = k;
   const tg = document.getElementById('aiOnBtn');
   if(tg) tg.textContent = state.set.aiOn === 0 ? 'مُعطّل — شغّله' : 'مفعّل — أوقفه';
+  const wb = document.getElementById('aiWebBtn');
+  if(wb) wb.textContent = state.set.aiWeb === 0 ? '🌐 البحث: معطّل — شغّله' : '🌐 البحث: مفعّل';
   const sel = document.getElementById('aiModelSel');
   if(sel && !sel.options.length){
     ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro'].forEach(function(m){
@@ -2410,6 +2416,15 @@ function aiAsk(text, opts){
   opts = opts || {};
   const withWeb = Object.assign({}, opts, { web: opts.web === false ? false : true });
   return aiCall(text, withWeb).catch(function(e){
+    // مفاتيح الطبقة المجانية قد ترفض أداة البحث بـ429 — ليست حصّة الأسئلة
+    if(withWeb.web && state.set.aiWeb !== 0 && e && (e.code === 'quota' || e.code === 'badkey')){
+      return aiCall(text, Object.assign({}, opts, { web: false })).then(function(r){
+        state.set.aiWeb = 0; save();
+        try{ toast('مفتاحك لا يدعم البحث في الإنترنت — أُوقف تلقائيًا'); }catch(e2){}
+        r.noweb = true;
+        return r;
+      }, function(){ throw e; });
+    }
     if(withWeb.web && e && (e.code === 'http' || e.code === 'model' || e.code === 'parse')){
       return aiCall(text, Object.assign({}, opts, { web: false })).catch(function(e2){
         if(e2 && (e2.code === 'model' || e2.code === 'http')){
