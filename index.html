@@ -486,7 +486,9 @@
 <div id="chatBar">
   <div class="inrow">
     <textarea id="chatIn" rows="1" placeholder="اسأل عن أي كلمة أو قاعدة…" dir="auto"></textarea>
+    <button class="btn o" onclick="photoPick()" title="صوّر صفحة الدرس" style="padding:12px 13px">📷</button>
     <button class="btn" onclick="chatSend()">إرسال</button>
+    <input type="file" id="chatFile" accept="image/*" multiple style="display:none" onchange="photoGo(this)">
   </div>
 </div>
 <button class="fab" onclick="tutorFromContext()" title="اسأل المعلّم">💬</button>
@@ -526,7 +528,7 @@
   <div class="sheet">
     <h3><span>إضافة درس جديد</span><span><button class="btn o sm" onclick="closeModal('mdPack')">إغلاق ✕</button></span></h3>
     <div class="note b"><b>كيف تضيف درسًا؟</b>
-      أرسل لي صور الدرس (المفردات والجمل من الكتاب أو السبورة)، وسأعيد لك «حزمة درس» — نص تلصقه في المربّع أدناه فيُضاف الدرس كاملًا: مفردات وأمثلة وقواعد وحوار واختبار ورسم حروفه.</div>
+      أسرع طريقة: افتح تبويب <b>المعلّم</b> واضغط 📷 وصوّر صفحة الدرس — يقرأها التطبيق ويبني الدرس بنفسه. أو صوّرها داخل التطبيق وأرسلها لي لأجهّز «حزمة درس» تلصقها هنا.</div>
     <textarea id="packBox" placeholder="الصق نص حزمة الدرس هنا…"></textarea>
     <button class="btn wide" style="margin-top:8px" onclick="installPack()">تركيب الدرس</button>
     <div id="packMsg" style="margin-top:9px"></div>
@@ -604,6 +606,16 @@
       <span class="sml">• الخطة المجانية من جوجل تسمح لهم باستخدام أسئلتك وصورك لتحسين خدماتهم — لا ترسل شيئًا شخصيًا.<br>
       • المفتاح يُحفظ في هذا الجهاز فقط، ولا يخرج في «نسخ تقدّمي»، ويُمسح بزر الحذف أعلاه.<br>
       • الحدود المجانية تقريبًا ٢٥٠ سؤالًا يوميًا، وعند تجاوزها يرجع المعلّم الداخلي تلقائيًا.</span></div>
+  </div>
+</div>
+
+
+<!-- معاينة الدرس المستخرج من الصور -->
+<div class="modal" id="mdPrev">
+  <div class="sheet">
+    <h3><span>👁 معاينة الدرس</span><span><button class="btn o sm" onclick="closeModal('mdPrev')">إغلاق ✕</button></span></h3>
+    <div class="note b"><b>راجع قبل التركيب</b>القراءة الآلية ممتازة لكنها ليست معصومة — صحّح أي نطق أو معنى هنا، وما تركّبه يدخل دروسك فورًا.</div>
+    <div id="prevBody" style="margin-top:8px"></div>
   </div>
 </div>
 
@@ -1035,7 +1047,7 @@ function go(p){
   if(p==='quiz' && !quiz.live) quizIntro();
   try{ document.body.classList.toggle('chat', p==='chat'); document.body.classList.toggle('showfab', p==='vocab'||p==='gram'||p==='dlg'); }catch(e){}
 }
-function openModal(id){ if(id==='mdAI') aiPaint(); if(id==='mdLesson') paintLessonSheet(); if(id==='mdPack') paintInstalled(); $('#'+id).classList.add('on'); }
+function openModal(id){ if(id==='mdPrev') prevPaint(); if(id==='mdAI') aiPaint(); if(id==='mdLesson') paintLessonSheet(); if(id==='mdPack') paintInstalled(); $('#'+id).classList.add('on'); }
 function closeModal(id){
   $('#'+id).classList.remove('on');
   if(id==='mdWrite' && writer){ try{ writer.cancelQuiz(); }catch(e){} }
@@ -1969,6 +1981,7 @@ function chatAction(a, v){
   if(a === 'more') return tutorDeeper(v);
   if(a === 'add') return myWordAdd(v);
   if(a === 'retry') return tutorAsk(v);
+  if(a === 'prev') return openModal('mdPrev');
   if(a === 'web'){ state.set.aiWeb = state.set.aiWeb === 0 ? 1 : 0; save(); aiPaint(); toast(state.set.aiWeb === 0 ? 'أُوقف البحث في الإنترنت' : 'فُعّل البحث في الإنترنت'); return; }
   if(a === 'clear'){ state.chat = []; save(); paintChat(); return; }
 }
@@ -2505,6 +2518,261 @@ function myWordAdd(q){
       typingOff();
       chatAdd('a', '<p>' + esc(AI_ERRS[e && e.code] || AI_ERRS.http) + '</p>');
     });
+}
+
+/* ==========================================================================
+   المرحلة ٣ — قراءة صور الدرس وتحويلها إلى درس داخل التطبيق
+   ضمان الجودة: مخطّط JSON صارم ← مراجعة ثانية على الصور ← معاينة قابلة للتعديل
+   ========================================================================== */
+let pendImgs = [], pendPack = null, pendWarn = [];
+
+/* ---------- تصغير الصور ---------- */
+function shrinkImg(file, max, q){
+  return new Promise(function(res, rej){
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = function(){
+      try{
+        const s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+        const c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(img.naturalWidth * s));
+        c.height = Math.max(1, Math.round(img.naturalHeight * s));
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        const d = c.toDataURL('image/jpeg', q || 0.72);
+        URL.revokeObjectURL(url);
+        res({ mime: 'image/jpeg', b64: d.slice(d.indexOf(',') + 1), prev: d });
+      }catch(e){ URL.revokeObjectURL(url); rej(e); }
+    };
+    img.onerror = function(){ URL.revokeObjectURL(url); rej(new Error('img')); };
+    img.src = url;
+  });
+}
+
+/* ---------- المخطّط الصارم ---------- */
+const LESSON_SCHEMA = {
+  type: 'object',
+  required: ['title', 'groups', 'sents', 'words'],
+  properties: {
+    title: { type: 'string' },
+    groups: { type: 'array', items: { type: 'object', required: ['n', 'name'],
+      properties: { n: { type: 'integer' }, name: { type: 'string' } } } },
+    sents: { type: 'array', items: { type: 'object', required: ['k', 't', 'ar'], properties: {
+      k: { type: 'string' },
+      t: { type: 'array', items: { type: 'object', required: ['hz', 'py', 'ar'], properties: {
+        hz: { type: 'string' }, py: { type: 'string' }, ar: { type: 'string' } } } },
+      ar: { type: 'string' }, q: { type: 'boolean' } } } },
+    words: { type: 'array', items: { type: 'object', required: ['hz', 'syl', 'm', 'tr', 'g', 'ex'], properties: {
+      hz: { type: 'string' }, syl: { type: 'array', items: { type: 'string' } },
+      m: { type: 'string' }, tr: { type: 'string' }, g: { type: 'integer' }, ex: { type: 'string' } } } }
+  }
+};
+
+const EXTRACT_SYS = [
+  'أنت مساعد يستخرج درس لغة صينية من صور صفحات كتاب أو سبورة، لطالب عربي مبتدئ.',
+  'قواعد صارمة:',
+  '- استخرج ما في الصور فقط. لا تخترع كلمة غير موجودة.',
+  '- الحروف الصينية مبسّطة فقط.',
+  '- syl = مصفوفة نطق كل حرف على حدة بعلامات النغمة، وطولها يساوي عدد حروف hz بالضبط.',
+  '- m = المعنى بالعربية بكلمتين أو ثلاث.',
+  '- tr = حيلة حفظ عربية قصيرة تفكّك الحرف وتربطه بمعناه. مثال للأسلوب:',
+  '  «高 عالٍ + 兴 مزاج ⟶ مزاجه عالٍ = سعيد».',
+  '- g = رقم المجموعة من قائمة groups.',
+  '- ex = مفتاح جملة موجودة في sents تستخدم هذه الكلمة، وإلا فأنشئ جملة قصيرة لها.',
+  '- كل جملة في sents تُقسَّم إلى وحدات t: كل وحدة hz و py و ar (معنى الوحدة بكلمة واحدة).',
+  '- مفاتيح k حروف إنجليزية صغيرة وأرقام وشرطة سفلية فقط.',
+  '- ar في الجملة = الترجمة العربية الكاملة.',
+  '- إن كانت الصورة تحتوي حوارًا، اجعل جمله ضمن sents.',
+  '- العنوان title بالعربية يصف موضوع الدرس.'
+].join('\n');
+
+const VERIFY_SYS = [
+  'أنت مدقّق لغوي للصينية. أمامك صور صفحة درس واستخراج أوّلي منها بصيغة JSON.',
+  'راجع كل كلمة وكل جملة مقابل الصور وصحّح:',
+  '- الحروف الصينية التي قُرئت خطأً.',
+  '- البينيين وعلامات النغمة (هذا أكثر موضع للخطأ).',
+  '- المعاني العربية غير الدقيقة.',
+  '- تطابق طول syl مع عدد الحروف.',
+  '- أي كلمة غير موجودة في الصور: احذفها.',
+  'أعد النتيجة كاملة بنفس البنية، مصحّحة. لا تضف شرحًا خارج JSON.'
+].join('\n');
+
+/* ---------- التحقق والإصلاح على الجهاز ---------- */
+function nextLessonId(){
+  for(let i = 3; i < 99; i++){ const id = 'L' + i; if(!LESSONS.some(function(l){ return l.id === id; })) return id; }
+  return 'L' + Date.now();
+}
+const CJK_ONLY = /^[一-鿿]+$/;
+
+function validatePack(raw){
+  const warn = [];
+  const out = { id: nextLessonId(), title: String((raw && raw.title) || 'درس جديد').slice(0, 60),
+    tag: 'من الصور', groups: {}, sents: {}, words: [], patterns: [], dialogue: [] };
+
+  (raw && raw.groups || []).forEach(function(g){
+    const n = parseInt(g && g.n, 10);
+    if(n > 0 && g.name) out.groups[n] = esc(String(g.name).slice(0, 40));
+  });
+  if(!Object.keys(out.groups).length) out.groups[1] = 'مفردات الدرس';
+
+  const used = {};
+  (raw && raw.sents || []).forEach(function(s, i){
+    let k = String((s && s.k) || '').toLowerCase().replace(/[^a-z0-9_]/g, '');
+    if(!/^[a-z][a-z0-9_]{1,23}$/.test(k) || used[k]) k = 's' + i;
+    const toks = [];
+    (s && s.t || []).forEach(function(t){
+      const hz = String((t && t.hz) || '').replace(/[^一-鿿！？。，、]/g, '');
+      if(!hz) return;
+      toks.push([hz, String((t && t.py) || '').slice(0, 30), esc(String((t && t.ar) || '').slice(0, 30))]);
+    });
+    if(!toks.length || !s.ar){ warn.push('جملة ناقصة حُذفت'); return; }
+    used[k] = 1;
+    out.sents[k] = { t: toks, ar: esc(String(s.ar).slice(0, 120)), q: !!s.q };
+  });
+
+  (raw && raw.words || []).forEach(function(w){
+    const hz = String((w && w.hz) || '').replace(/[^一-鿿]/g, '');
+    const m = String((w && w.m) || '').trim();
+    if(!hz || hz.length > 6 || !CJK_ONLY.test(hz) || !m){ warn.push('كلمة ناقصة حُذفت'); return; }
+    const chars = hz.split('');
+    let syl = Array.isArray(w.syl) ? w.syl.map(function(x){ return String(x || '').slice(0, 12); }) : [];
+    let dpy = null;
+    if(syl.length !== chars.length){ dpy = syl.join('') || ''; syl = chars.map(function(){ return ''; }); warn.push('نطق الحروف غير مطابق في ' + hz); }
+    let ex = String((w && w.ex) || '');
+    if(!out.sents[ex]){
+      ex = Object.keys(out.sents).filter(function(k){
+        return out.sents[k].t.some(function(t){ return t[0].indexOf(hz) >= 0; });
+      })[0] || '';
+    }
+    const g = (w && out.groups[w.g]) ? w.g : Object.keys(out.groups)[0];
+    const word = { id: out.words.length + 1, g: parseInt(g, 10),
+      ch: chars.map(function(c, i){ return [c, syl[i] || '']; }),
+      m: esc(m.slice(0, 60)), tr: esc(String((w && w.tr) || '').slice(0, 220)) };
+    if(dpy) word.dpy = dpy;
+    if(ex) word.ex = ex;
+    out.words.push(word);
+  });
+
+  if(out.words.length < 2) return { err: 'لم أتمكّن من قراءة كلمات كافية من الصور. جرّب صورة أوضح أو أقرب.', warn: warn };
+  return { lesson: out, warn: warn };
+}
+
+/* ---------- المسار الكامل ---------- */
+function photoPick(){
+  const f = document.getElementById('chatFile');
+  if(!f) return;
+  if(!aiReady()){ chatAdd('a', '<p>قراءة الصور تحتاج المعلّم الذكي.</p><div class="trow">' + actBtn('⚙ فعّله', 'ai', '') + '</div>'); return; }
+  f.value = ''; f.click();
+}
+function photoGo(input){
+  const files = Array.prototype.slice.call(input.files || []).slice(0, 3);
+  if(!files.length) return;
+  chatAdd('u', '📷 ' + files.length + ' صورة من الدرس');
+  typingOn();
+  Promise.all(files.map(function(f){ return shrinkImg(f, 1100, 0.72); }))
+    .then(function(imgs){
+      pendImgs = imgs;
+      return aiCall('اقرأ هذه الصور واستخرج الدرس كاملًا.', {
+        system: EXTRACT_SYS, images: imgs, schema: LESSON_SCHEMA,
+        model: 'gemini-2.5-flash', temp: 0.15, max: 4096, web: false, turns: [], timeout: 90000
+      });
+    })
+    .then(function(r){
+      let raw;
+      try{ raw = JSON.parse(r.text); }catch(e){ throw AIErr('parse'); }
+      // مراجعة ثانية على نفس الصور لتصحيح البينيين والمعاني
+      return aiCall('راجع هذا الاستخراج مقابل الصور وصحّحه:\n' + JSON.stringify(raw).slice(0, 12000), {
+        system: VERIFY_SYS, images: pendImgs, schema: LESSON_SCHEMA,
+        model: 'gemini-2.5-flash', temp: 0.1, max: 4096, web: false, turns: [], timeout: 90000
+      }).then(function(r2){
+        try{ return JSON.parse(r2.text); }catch(e){ return raw; }
+      }, function(){ return raw; });
+    })
+    .then(function(raw){
+      typingOff();
+      const v = validatePack(raw);
+      if(v.err){ chatAdd('a', '<p>' + esc(v.err) + '</p>'); return; }
+      pendPack = v.lesson; pendWarn = v.warn;
+      chatAdd('a', '<p><b>قرأت الصور ✓</b> استخرجت ' + v.lesson.words.length + ' كلمة و'
+        + Object.keys(v.lesson.sents).length + ' جملة.</p>'
+        + '<div class="trow">' + actBtn('👁 راجع وعدّل قبل التركيب', 'prev', '', 'g') + '</div>');
+      openModal('mdPrev');
+    })
+    .catch(function(e){
+      typingOff();
+      chatAdd('a', '<p>' + esc(AI_ERRS[e && e.code] || AI_ERRS.http) + '</p>'
+        + ((e && e.detail) ? '<div class="tles" dir="ltr">' + esc(e.detail) + '</div>' : ''));
+    });
+}
+
+/* ---------- المعاينة ---------- */
+function prevPaint(){
+  const box = document.getElementById('prevBody');
+  if(!box) return;
+  if(!pendPack){ box.innerHTML = '<div class="note">لا يوجد درس قيد المعاينة.</div>'; return; }
+  box.innerHTML =
+    '<p><b>عنوان الدرس</b></p>'
+    + '<input id="prevTitle" value="' + esc(pendPack.title) + '" style="width:100%;padding:9px;border:1px solid var(--line);border-radius:10px;font-family:inherit">'
+    + (pendWarn.length ? '<div class="note" style="margin-top:8px"><b>ملاحظات القراءة</b>' + esc(pendWarn.slice(0, 4).join(' · ')) + '</div>' : '')
+    + '<p style="margin-top:10px"><b>الكلمات (' + pendPack.words.length + ')</b> — عدّل ما تشاء، وأزل الصح عمّا لا تريده:</p>'
+    + pendPack.words.map(function(w, i){
+        return '<div class="tcard" style="padding:7px 9px">'
+          + '<label style="display:flex;gap:7px;align-items:center">'
+            + '<input type="checkbox" class="pvOn" data-i="' + i + '" checked>'
+            + '<span class="hz" style="font-size:24px">' + esc(w.ch.map(function(c){ return c[0]; }).join('')) + '</span>'
+            + '<button class="cact spk" data-a="speak" data-v="' + esc(w.ch.map(function(c){ return c[0]; }).join('')) + '">🔊</button>'
+          + '</label>'
+          + '<div class="row" style="margin-top:5px">'
+            + '<input class="pvPy" data-i="' + i + '" dir="ltr" value="' + esc(w.dpy || w.ch.map(function(c){ return c[1]; }).join(' ')) + '" placeholder="النطق"'
+              + ' style="flex:1;min-width:110px;padding:7px;border:1px solid var(--line);border-radius:9px;font-family:Arial">'
+            + '<input class="pvM" data-i="' + i + '" value="' + esc(w.m) + '" placeholder="المعنى"'
+              + ' style="flex:1;min-width:110px;padding:7px;border:1px solid var(--line);border-radius:9px;font-family:inherit">'
+          + '</div></div>';
+      }).join('')
+    + '<div class="row eq" style="margin-top:10px">'
+      + '<button class="btn g" onclick="prevInstall()">✓ ركّب الدرس</button>'
+      + '<button class="btn o r" onclick="pendPack=null;closeModal(\'mdPrev\')">إلغاء</button>'
+    + '</div>';
+}
+function prevInstall(){
+  try{
+    if(!pendPack) return;
+    const t = document.getElementById('prevTitle');
+    if(t && t.value.trim()) pendPack.title = esc(t.value.trim().slice(0, 60));
+    const keep = [];
+    Array.prototype.forEach.call(document.querySelectorAll('.pvOn'), function(cb){
+      const i = +cb.getAttribute('data-i');
+      if(!cb.checked) return;
+      const w = pendPack.words[i];
+      const py = (document.querySelector('.pvPy[data-i="' + i + '"]') || {}).value;
+      const m = (document.querySelector('.pvM[data-i="' + i + '"]') || {}).value;
+      if(m && m.trim()) w.m = esc(m.trim());
+      if(py && py.trim()){
+        const parts = py.trim().split(/\s+/);
+        if(parts.length === w.ch.length){ w.ch = w.ch.map(function(c, j){ return [c[0], parts[j]]; }); delete w.dpy; }
+        else w.dpy = py.trim();
+      }
+      w.id = keep.length + 1;
+      keep.push(w);
+    });
+    if(keep.length < 1){ toast('لم تختر أي كلمة'); return; }
+    pendPack.words = keep;
+    const box = document.getElementById('packBox');
+    if(box){ box.value = JSON.stringify({ lesson: pendPack }); installPack(); }
+    const chars = [];
+    keep.forEach(function(w){ w.ch.forEach(function(c){ if(chars.indexOf(c[0]) < 0) chars.push(c[0]); }); });
+    closeModal('mdPrev');
+    const title = pendPack.title, n = keep.length;
+    pendPack = null; pendImgs = [];
+    AIDX = null;
+    chatAdd('a', '<p><b>تم تركيب «' + esc(title) + '» ✓</b> ' + n + ' كلمة دخلت المفردات والاختبارات والتكرار المتباعد.</p>'
+      + '<p class="sml muted" id="strk2">جارٍ تنزيل خطوات رسم الحروف…</p>'
+      + '<div class="trow">' + actBtn('📚 افتح المفردات', 'go', 'vocab') + actBtn('🎯 اختبرني عليه', 'quiz', '10') + '</div>');
+    ensureStrokes(chars).then(function(k){
+      const el2 = document.getElementById('strk2');
+      if(el2) el2.textContent = k ? ('✓ جاهزة: خطوات رسم ' + k + ' حرفًا.') : 'خطوات الرسم غير متاحة لبعض الحروف (بقية المزايا تعمل).';
+    });
+  }catch(e){
+    toast('تعذّر التركيب');
+  }
 }
 
 function paintAll(){ paintHome(); paintVocab(); }
