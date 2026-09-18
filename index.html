@@ -2064,6 +2064,8 @@ const AI_PROVIDERS = {
       }
       while(contents.length && contents[0].role === 'model') contents.shift();
       const gc = { temperature: opts.temp == null ? 0.4 : opts.temp, maxOutputTokens: opts.max || 700 };
+      // نماذج 2.5 تفكّر داخل نفس مساحة الرد؛ في مهام الاستخراج نعطّل التفكير
+      if(opts.noThink) gc.thinkingConfig = { thinkingBudget: 0 };
       if(opts.schema){ gc.responseMimeType = 'application/json'; gc.responseSchema = opts.schema; }
       const req = { systemInstruction: sys ? { parts: [{ text: sys }] } : undefined, contents: contents, generationConfig: gc };
       if(opts.web && !opts.schema && state.set.aiWeb !== 0) req.tools = [{ google_search: {} }];
@@ -2076,7 +2078,15 @@ const AI_PROVIDERS = {
         throw AIErr('parse', 'رد غير مفهوم');
       }
       if(c.finishReason === 'SAFETY') throw AIErr('safety', 'رُفض الطلب');
-      return ((c.content && c.content.parts) || []).map(function(p){ return p.text || ''; }).join('').trim();
+      const out = ((c.content && c.content.parts) || []).map(function(p){ return p.text || ''; }).join('').trim();
+      if(!out){
+        const e3 = AIErr(c.finishReason === 'MAX_TOKENS' ? 'long' : 'empty');
+        e3.detail = 'finishReason: ' + (c.finishReason || 'unknown')
+          + (j.usageMetadata ? ' · thoughts: ' + (j.usageMetadata.thoughtsTokenCount || 0)
+             + ' · out: ' + (j.usageMetadata.candidatesTokenCount || 0) : '');
+        throw e3;
+      }
+      return out;
     },
     fail: function(st, body){
       var msg = '';
@@ -2208,6 +2218,7 @@ const AI_ERRS = {
   abort:  'تأخّر الرد أكثر من اللازم. هذه إجابتي من دروسك:',
   parse:  'وصلني رد غير مفهوم. هذه إجابتي من دروسك:',
   empty:  'قرأت الصورة لكن لم أجد فيها كلمات صينية واضحة. صوّر أقرب وأوضح، أو صوّر قائمة المفردات نفسها.',
+  long:   'الصفحة كثيفة جدًا وامتلأت مساحة الرد قبل أن يكتمل. صوّرها على جزأين (نصف الصفحة في كل صورة) وأعد المحاولة.',
   http:   'تعذّر الوصول للمعلّم الذكي. هذه إجابتي من دروسك:'
 };
 
@@ -2616,7 +2627,7 @@ function p3Json(txt){
 }
 function p3One(imgs, sys, text, useSchema){
   const o = { system: useSchema ? sys : (sys + JSON_HINT), images: imgs,
-    model: 'gemini-2.5-flash', temp: 0.15, max: 6000, web: false, turns: [], timeout: 120000 };
+    model: 'gemini-2.5-flash', temp: 0.15, max: 8192, noThink: true, web: false, turns: [], timeout: 120000 };
   if(useSchema) o.schema = LESSON_SCHEMA;
   return aiCall(text, o);
 }
@@ -2626,7 +2637,7 @@ function p3Chunk(imgs, tries){
     .then(function(r){ return p3Json(r.text); })
     .catch(function(e){
       // بعض المفاتيح/النماذج ترفض المخطّط الصارم أو تعيد نصًّا غير نقيّ
-      if(e && (e.code === 'http' || e.code === 'parse' || e.code === 'model')){
+      if(e && (e.code === 'http' || e.code === 'parse' || e.code === 'model' || e.code === 'empty' || e.code === 'long')){
         p3NoSchema = 1;
         return p3One(imgs, EXTRACT_SYS, ask, false).then(function(r2){ return p3Json(r2.text); });
       }
@@ -2822,7 +2833,12 @@ function photoGo(input){
       p3Busy = false;
       if(!parts.length){
         setS('تعذّرت قراءة الصفحات.', 100);
-        chatAdd('a', '<p>لم أستطع قراءة أي صفحة. جرّب صورًا أوضح، أو أعد المحاولة بعد دقيقة.</p>'
+        chatAdd('a', '<p><b>لم أستطع قراءة أي صفحة.</b></p>'
+          + '<div class="note"><b>نصائح تصوير تحلّ أغلب الحالات</b>'
+          + '• صوّر <b>قائمة المفردات</b> وحدها بدل الصفحة كاملة.<br>'
+          + '• قرّب الكاميرا حتى تملأ الكلمات الشاشة، والصفحة مستوية لا مائلة.<br>'
+          + '• إن كانت الصفحة كثيفة صوّرها نصفين.<br>'
+          + '• إضاءة جيدة بلا ظل يدك ولا انعكاس.</div>'
           + (fails.length ? '<div class="tles">تعثّرت: ' + esc(fails.join(' · ')) + '</div>' : ''));
         return;
       }
