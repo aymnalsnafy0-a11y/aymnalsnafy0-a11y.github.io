@@ -554,6 +554,8 @@
     </div>
     <p style="margin:2px 0 4px"><b>الصوت المستخدم</b></p>
     <select id="voiceSel" style="width:100%; padding:9px; border-radius:10px; border:1px solid var(--line); font-family:inherit; margin-bottom:12px"></select>
+    <p style="margin:2px 0 4px"><b>المعلّم الذكي</b></p>
+    <button class="btn o sm wide" onclick="closeModal('mdSet');openModal('mdAI')" style="margin-bottom:12px">🤖 إعداد المعلّم الذكي (مفتاح مجاني)</button>
     <p style="margin:2px 0 4px"><b>النسخة الاحتياطية</b></p>
     <div class="row eq" style="margin-bottom:12px">
       <button class="btn o sm" onclick="exportProgress()">📤 نسخ تقدّمي</button>
@@ -563,6 +565,43 @@
     <button class="btn o sm wide" onclick="selfTest()" style="margin-top:6px">🔧 فحص التطبيق</button>
     <div id="diag" class="sml" style="margin-top:8px"></div>
     <p class="sml muted" style="margin:10px 0 0">التقدّم والدروس المضافة محفوظة داخل هذا الجهاز/المتصفح. إن نقلت الملف لجهاز آخر استخدم «نسخ تقدّمي».</p>
+  </div>
+</div>
+
+
+<!-- نافذة المعلّم الذكي -->
+<div class="modal" id="mdAI">
+  <div class="sheet">
+    <h3><span>🤖 المعلّم الذكي</span><span><button class="btn o sm" onclick="closeModal('mdAI')">إغلاق ✕</button></span></h3>
+    <div id="aiState"></div>
+    <div class="note b" style="margin-top:8px"><b>ما الفرق؟</b>
+      المعلّم الداخلي يعمل دائمًا بلا إنترنت ويعرف دروسك. المعلّم الذكي يضيف الإجابة عن أي سؤال مفتوح خارج الدروس — ويحتاج مفتاحًا مجانيًا من جوجل (بلا بطاقة بنكية).</div>
+    <p style="margin:12px 0 4px"><b>كيف تحصل على المفتاح؟</b></p>
+    <ol class="tight sml" style="margin:0 0 8px">
+      <li>افتح <span class="ltr">aistudio.google.com/apikey</span> وسجّل بحسابك في جوجل.</li>
+      <li>اضغط <b><span class="ltr">Create API key</span></b>.</li>
+      <li>انسخ السطر الذي يبدأ بـ <span class="ltr">AIza…</span></li>
+      <li>الصقه هنا ثم اضغط «اختبر المفتاح».</li>
+    </ol>
+    <input id="aiKeyIn" type="text" dir="ltr" inputmode="text" autocomplete="off" autocapitalize="none"
+           spellcheck="false" placeholder="AIza…"
+           style="width:100%;padding:11px;border:1px solid var(--line);border-radius:11px;font-family:monospace;font-size:13px">
+    <div class="row eq" style="margin-top:8px">
+      <button class="btn" onclick="aiTest()">اختبر المفتاح</button>
+      <button class="btn o" onclick="aiSaveKey()">احفظ</button>
+    </div>
+    <div id="aiTest" style="margin-top:8px"></div>
+    <p style="margin:12px 0 4px"><b>النموذج</b></p>
+    <select id="aiModelSel" onchange="aiPickModel()"
+            style="width:100%;padding:9px;border-radius:10px;border:1px solid var(--line);font-family:inherit"></select>
+    <div class="row eq" style="margin-top:10px">
+      <button class="btn o sm" id="aiOnBtn" onclick="aiToggle()">مفعّل — أوقفه</button>
+      <button class="btn o sm r" onclick="aiClearKey()">🗑 احذف المفتاح</button>
+    </div>
+    <div class="note" style="margin-top:12px"><b>اقرأ هذا قبل الاستخدام</b>
+      <span class="sml">• الخطة المجانية من جوجل تسمح لهم باستخدام أسئلتك وصورك لتحسين خدماتهم — لا ترسل شيئًا شخصيًا.<br>
+      • المفتاح يُحفظ في هذا الجهاز فقط، ولا يخرج في «نسخ تقدّمي»، ويُمسح بزر الحذف أعلاه.<br>
+      • الحدود المجانية تقريبًا ٢٥٠ سؤالًا يوميًا، وعند تجاوزها يرجع المعلّم الداخلي تلقائيًا.</span></div>
   </div>
 </div>
 
@@ -790,7 +829,7 @@ const DAY = 86400000, BOX_DAYS = [0,1,3,7,14,30];
 let state = load(), L = null, S = null, W = null, PATTERNS = null, DLG = null, GROUPS = null;
 
 function blank(){
-  return { w:{}, wr:{}, streak:{last:null,n:0}, mis:[], quiz:{}, packs:[], cur:'L1', chat:[], set:{rate:0.8, voice:''} };
+  return { w:{}, wr:{}, streak:{last:null,n:0}, mis:[], quiz:{}, packs:[], cur:'L1', chat:[], set:{rate:0.8, voice:'', aiProvider:'gemini', aiModel:'gemini-2.5-flash', aiOn:1, aiDay:{d:null,n:0}} };
 }
 function load(){
   let s = null;
@@ -994,7 +1033,7 @@ function go(p){
   if(p==='quiz' && !quiz.live) quizIntro();
   try{ document.body.classList.toggle('chat', p==='chat'); document.body.classList.toggle('showfab', p==='vocab'||p==='gram'||p==='dlg'); }catch(e){}
 }
-function openModal(id){ if(id==='mdLesson') paintLessonSheet(); if(id==='mdPack') paintInstalled(); $('#'+id).classList.add('on'); }
+function openModal(id){ if(id==='mdAI') aiPaint(); if(id==='mdLesson') paintLessonSheet(); if(id==='mdPack') paintInstalled(); $('#'+id).classList.add('on'); }
 function closeModal(id){
   $('#'+id).classList.remove('on');
   if(id==='mdWrite' && writer){ try{ writer.cancelQuiz(); }catch(e){} }
@@ -1497,7 +1536,9 @@ function quizDone(){
    نسخ/استرجاع/تصفير
    ========================================================================== */
 function exportProgress(){
-  const txt = JSON.stringify(state);
+  const clean = JSON.parse(JSON.stringify(state));
+  if(clean.set){ delete clean.set.aiKey; delete clean.set.apiKey; }
+  const txt = JSON.stringify(clean);
   if(navigator.clipboard) navigator.clipboard.writeText(txt).then(
     ()=>toast('تم نسخ تقدّمك — الصقه في مذكّرة لحفظه'),
     ()=>prompt('انسخ هذا النص واحفظه:', txt));
@@ -1514,6 +1555,7 @@ function importProgress(){
 }
 function resetAll(){
   if(!confirm('سيُحذف كل تقدّمك: الكلمات المحفوظة، الأخطاء، سلسلة الأيام، والدروس المضافة. متأكد؟')) return;
+  try{ setAiKey(); }catch(e){}
   state = blank(); save(); location.reload();
 }
 
@@ -1889,16 +1931,7 @@ function paintChat(scroll){
     : '<div class="msg ai"><div class="bubble">' + tutorHelp() + '</div></div>';
   if(scroll) setTimeout(function(){ try{ window.scrollTo(0, document.body.scrollHeight); }catch(e){} }, 40);
 }
-function tutorAsk(q){
-  try{
-    const t = String(q || '').trim();
-    if(!t) return;
-    chatAdd('u', esc(t));
-    chatAdd('a', tutorAnswer(t));
-  }catch(e){
-    try{ chatAdd('a', '<p>صار خطأ بسيط عندي. جرّب صياغة أخرى أو اكتب «مساعدة».</p>'); }catch(_){}
-  }
-}
+/* استُبدلت بنسخة المرحلة ٢ أدناه */
 function chatSend(){
   const inp = document.getElementById('chatIn');
   if(!inp) return;
@@ -1917,6 +1950,8 @@ function chatAction(a, v){
   if(a === 'quiz') return quizStart(parseInt(v || '6', 10), true);
   if(a === 'due') return startSession('due');
   if(a === 'new') return startSession('new');
+  if(a === 'ai') return openModal('mdAI');
+  if(a === 'more') return tutorDeeper(v);
   if(a === 'clear'){ state.chat = []; save(); paintChat(); return; }
 }
 function tutorFromContext(){
@@ -1957,6 +1992,312 @@ function initTutor(){
     window.visualViewport.addEventListener('resize', fitChatBar);
     window.visualViewport.addEventListener('scroll', fitChatBar);
   }
+}
+
+/* ==========================================================================
+   المعلّم الذكي (المرحلة ٢) — مفتاح المستخدم المجاني، نداء مباشر بلا خادم
+   المفتاح يُخزَّن خارج state حتى لا يتسرّب في «نسخ تقدّمي» ولا يُمسح بالاسترجاع.
+   ========================================================================== */
+const AIKEY_LS = 'hsk_ai_key_v1';
+const AI_DAILY_CAP = 200;
+
+function aiKey(){ try{ return localStorage.getItem(AIKEY_LS) || ''; }catch(e){ return ''; } }
+function setAiKey(v){ try{ v ? localStorage.setItem(AIKEY_LS, v) : localStorage.removeItem(AIKEY_LS); }catch(e){} }
+function aiReady(){ return !!aiKey() && state.set.aiOn !== 0; }
+function aiModel(){ return state.set.aiModel || 'gemini-2.5-flash'; }
+
+function aiQuotaLeft(){
+  const t = today(), d = state.set.aiDay || {};
+  if(d.d !== t) return AI_DAILY_CAP;
+  return Math.max(0, AI_DAILY_CAP - (d.n || 0));
+}
+function aiCount(){
+  const t = today(), d = state.set.aiDay || {};
+  state.set.aiDay = (d.d === t) ? { d: t, n: (d.n || 0) + 1 } : { d: t, n: 1 };
+  save();
+}
+
+function AIErr(code, msg){ const e = new Error(msg || code); e.code = code; return e; }
+
+const AI_PROVIDERS = {
+  gemini: {
+    base: 'https://generativelanguage.googleapis.com/v1beta/',
+    head: function(k){ return { 'Content-Type': 'application/json', 'x-goog-api-key': k }; },
+    build: function(sys, turns, imgs, opts){
+      const contents = turns.map(function(m){
+        return { role: m.role === 'a' ? 'model' : 'user', parts: [{ text: m.text }] };
+      });
+      if(imgs && imgs.length && contents.length){
+        const last = contents[contents.length - 1];
+        imgs.forEach(function(im){ last.parts.unshift({ inline_data: { mime_type: im.mime, data: im.b64 } }); });
+      }
+      const gc = { temperature: opts.temp == null ? 0.4 : opts.temp, maxOutputTokens: opts.max || 700 };
+      if(opts.schema){ gc.responseMimeType = 'application/json'; gc.responseSchema = opts.schema; }
+      return { systemInstruction: sys ? { parts: [{ text: sys }] } : undefined, contents: contents, generationConfig: gc };
+    },
+    parse: function(j){
+      const c = j && j.candidates && j.candidates[0];
+      if(!c){
+        if(j && j.promptFeedback && j.promptFeedback.blockReason) throw AIErr('safety', 'رُفض الطلب');
+        throw AIErr('parse', 'رد غير مفهوم');
+      }
+      if(c.finishReason === 'SAFETY') throw AIErr('safety', 'رُفض الطلب');
+      return ((c.content && c.content.parts) || []).map(function(p){ return p.text || ''; }).join('').trim();
+    },
+    fail: function(st, body){
+      if(st === 429) return AIErr('quota');
+      if(st === 403 || (st === 400 && /API[_ ]?key|API_KEY_INVALID/i.test(body))) return AIErr('badkey');
+      if(st === 404) return AIErr('model');
+      return AIErr('http', 'HTTP ' + st);
+    }
+  },
+  mock: {
+    build: function(sys, turns){ return { sys: sys, turns: turns }; },
+    mock: true
+  }
+};
+
+function aiSystem(){
+  const vocab = W.map(function(w){ return wordHz(w) + ' ' + wordPy(w) + ' = ' + w.m; }).join('\n');
+  const pats = (PATTERNS || []).map(function(p){ return p.name + ' ← ' + p.f; }).join('\n');
+  const weak = pickWords(6, true).map(function(w){ return wordHz(w); }).join('، ');
+  return [
+    'أنت «المعلّم»، مدرّس لغة صينية لطالب عربي مبتدئ في مستوى HSK 1.',
+    'قواعد إلزامية:',
+    '- أجب بالعربية المبسّطة فقط، وبلا أي تنسيق Markdown (لا * ولا #).',
+    '- كل جملة صينية تكتبها اكتب بعدها النطق بالبينيين مع علامات النغمة ثم المعنى العربي.',
+    '- استخدم الحروف المبسّطة فقط.',
+    '- عند شرح كلمة: المعنى، ثم حيلة حفظ قصيرة تربط أجزاء الحرف بمعناه، ثم مثال واحد.',
+    '- لا تتجاوز ٨٠ كلمة عربية في الرد.',
+    '- التزم بمفردات الدرس أدناه، ولا تُدخل كلمات أصعب إلا إذا سُئلت عنها.',
+    '- إن كان السؤال خارج تعلّم الصينية فاعتذر بسطر واحد.',
+    '- إن لم تعرف الإجابة فقل «لا أعرف» بدل الاختراع.',
+    'الدرس الحالي: ' + L.title,
+    'مفرداته:\n' + vocab,
+    pats ? 'قواعده:\n' + pats : '',
+    weak ? 'كلمات يخطئ فيها الطالب: ' + weak : ''
+  ].filter(Boolean).join('\n');
+}
+
+function aiTurns(limit){
+  const out = [], msgs = (state.chat || []).slice(-(limit || 8));
+  msgs.forEach(function(m){
+    const txt = String(m.h || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    if(txt) out.push({ role: m.r === 'u' ? 'u' : 'a', text: txt.slice(0, 500) });
+  });
+  return out;
+}
+
+function aiCall(userText, opts){
+  opts = opts || {};
+  const pid = opts.provider || state.set.aiProvider || 'gemini';
+  const p = AI_PROVIDERS[pid];
+  if(!p) return Promise.reject(AIErr('http', 'مزوّد غير معروف'));
+
+  if(p.mock){
+    return new Promise(function(res, rej){
+      setTimeout(function(){
+        const m = String(userText || '');
+        if(/quota/.test(m)) return rej(AIErr('quota'));
+        if(/badkey/.test(m)) return rej(AIErr('badkey'));
+        if(/offline/.test(m)) return rej(AIErr('offline'));
+        res('هذه إجابة تجريبية من المزوّد الوهمي. 你好 nǐ hǎo تعني «مرحبًا».');
+      }, 120);
+    });
+  }
+  const key = aiKey();
+  if(!key) return Promise.reject(AIErr('nokey'));
+  if(navigator.onLine === false) return Promise.reject(AIErr('offline'));
+  if(aiQuotaLeft() <= 0) return Promise.reject(AIErr('cap'));
+
+  const turns = (opts.turns || aiTurns(8)).concat(opts.skipUser ? [] : [{ role: 'u', text: userText }]);
+  const body = p.build(opts.system == null ? aiSystem() : opts.system, turns, opts.images, opts);
+  const ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  const tmr = ctl ? setTimeout(function(){ ctl.abort(); }, opts.timeout || 45000) : 0;
+
+  return fetch(p.base + 'models/' + (opts.model || aiModel()) + ':generateContent', {
+    method: 'POST', headers: p.head(key), body: JSON.stringify(body), signal: ctl ? ctl.signal : undefined
+  }).then(function(r){
+    return r.text().then(function(txt){
+      if(!r.ok) throw p.fail(r.status, txt);
+      aiCount();
+      return p.parse(JSON.parse(txt));
+    });
+  }).catch(function(e){
+    if(e && e.code) throw e;
+    if(e && e.name === 'AbortError') throw AIErr('abort');
+    throw AIErr('offline', e && e.message);
+  }).then(function(v){ if(tmr) clearTimeout(tmr); return v; },
+          function(e){ if(tmr) clearTimeout(tmr); throw e; });
+}
+
+/* ---------- تنسيق رد النموذج: تهريب أولًا ثم تزيين ---------- */
+function chatFmt(t){
+  let h = esc(String(t == null ? '' : t)).replace(/\r?\n/g, '<br>');
+  h = h.replace(/([一-鿿][一-鿿　-〿！？。，、]*)/g, function(m){
+    return '<span class="hz">' + m + '</span><button class="cact spk" data-a="speak" data-v="' + esc(m) + '">🔊</button>';
+  });
+  h = h.replace(/[A-Za-zü]*[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ][A-Za-zü]*/g, function(m){
+    return '<span class="py t' + tone(m) + '">' + m + '</span>';
+  });
+  return h;
+}
+
+const AI_ERRS = {
+  nokey:  'فعّل المعلّم الذكي أولًا من الإعدادات ⚙ ليجيب عن الأسئلة المفتوحة.',
+  offline:'لا يوجد اتصال بالإنترنت الآن — هذه إجابتي من دروسك المحفوظة:',
+  quota:  'انتهت حصّتك المجانية اليوم عند جوجل، وتتجدّد تلقائيًا. هذه إجابتي من دروسك:',
+  cap:    'وصلت حدّ الاستخدام اليومي الذي ضبطناه للأمان. هذه إجابتي من دروسك:',
+  badkey: 'المفتاح غير صالح أو منتهي — افتح الإعدادات ⚙ وأعد لصقه.',
+  model:  'النموذج المختار غير متاح لمفتاحك — افتح الإعدادات ⚙ واضغط «اختبر المفتاح» لاختيار نموذج متاح.',
+  safety: 'رفض المزوّد الإجابة عن هذا السؤال. هذه إجابتي من دروسك:',
+  abort:  'تأخّر الرد أكثر من اللازم. هذه إجابتي من دروسك:',
+  parse:  'وصلني رد غير مفهوم. هذه إجابتي من دروسك:',
+  http:   'تعذّر الوصول للمعلّم الذكي. هذه إجابتي من دروسك:'
+};
+
+/* ---------- التوجيه ---------- */
+function tutorScore(q){
+  try{
+    const s = arNorm(q);
+    const it = tutorIntent(s);
+    // أفعال يستطيع المعلّم الداخلي تنفيذها دائمًا
+    if(it === 'drill' || it === 'plan' || it === 'help') return 90;
+    // الباقي يعتمد على وجود نتيجة فعلية في الدروس
+    const w = findWordsT(q, 1), p = findPatsT(q), se = findSentsT(q, 1);
+    return Math.max(w[0] ? w[0].sc : 0, p[0] ? p[0].sc : 0, se[0] ? se[0].sc : 0);
+  }catch(e){ return 0; }
+}
+function typingOn(){
+  try{
+    const log = document.getElementById('chatLog'); if(!log) return;
+    const d = document.createElement('div');
+    d.className = 'msg ai'; d.id = 'tTyping';
+    d.innerHTML = '<div class="bubble"><span class="tdots"><span></span><span></span><span></span></span></div>';
+    log.appendChild(d);
+    window.scrollTo(0, document.body.scrollHeight);
+  }catch(e){}
+}
+function typingOff(){
+  try{ const d = document.getElementById('tTyping'); if(d && d.parentNode) d.parentNode.removeChild(d); }catch(e){}
+}
+function aiFoot(){ return '<div class="tles">🤖 المعلّم الذكي · بقي لك اليوم ' + aiQuotaLeft() + ' سؤالًا</div>'; }
+
+function tutorAsk(q){
+  try{
+    const t = String(q || '').trim();
+    if(!t) return;
+    chatAdd('u', esc(t));
+    const off = tutorAnswer(t), sc = tutorScore(t);
+
+    if(!aiReady()){
+      chatAdd('a', off + (aiKey() ? '' : '<div class="trow">' + actBtn('🤖 فعّل المعلّم الذكي', 'ai', '') + '</div>'));
+      return;
+    }
+    if(sc >= 70){
+      chatAdd('a', off + '<div class="trow">' + actBtn('🤖 اشرح أكثر', 'more', t) + '</div>');
+      return;
+    }
+    typingOn();
+    aiCall(t).then(function(txt){
+      typingOff();
+      chatAdd('a', chatFmt(txt) + aiFoot());
+    }).catch(function(e){
+      typingOff();
+      const m = AI_ERRS[e && e.code] || AI_ERRS.http;
+      chatAdd('a', '<p>' + esc(m) + '</p>' + off
+        + ((e && (e.code === 'badkey' || e.code === 'model' || e.code === 'nokey'))
+            ? '<div class="trow">' + actBtn('⚙ افتح الإعدادات', 'ai', '') + '</div>' : ''));
+    });
+  }catch(e){
+    try{ chatAdd('a', '<p>صار خطأ بسيط عندي. جرّب صياغة أخرى أو اكتب «مساعدة».</p>'); }catch(_){}
+  }
+}
+function tutorDeeper(q){
+  if(!aiReady()) return openModal('mdAI');
+  typingOn();
+  aiCall('اشرح لي بتوسّع: ' + q).then(function(txt){
+    typingOff(); chatAdd('a', chatFmt(txt) + aiFoot());
+  }).catch(function(e){
+    typingOff();
+    chatAdd('a', '<p>' + esc(AI_ERRS[e && e.code] || AI_ERRS.http) + '</p>');
+  });
+}
+
+/* ---------- شاشة الإعداد ---------- */
+function aiPaint(){
+  const k = aiKey(), st = document.getElementById('aiState');
+  if(!st) return;
+  st.innerHTML = k
+    ? '<div class="note g"><b>المعلّم الذكي مفعّل ✓</b>المفتاح محفوظ في هذا الجهاز · النموذج: <span class="ltr">' + esc(aiModel()) + '</span> · بقي اليوم ' + aiQuotaLeft() + ' سؤالًا</div>'
+    : '<div class="note"><b>غير مفعّل</b>المعلّم الداخلي يعمل بدونه، لكن الأسئلة المفتوحة تحتاج مفتاحًا مجانيًا.</div>';
+  const inp = document.getElementById('aiKeyIn');
+  if(inp && !inp.value && k) inp.value = k;
+  const tg = document.getElementById('aiOnBtn');
+  if(tg) tg.textContent = state.set.aiOn === 0 ? 'مُعطّل — شغّله' : 'مفعّل — أوقفه';
+  const sel = document.getElementById('aiModelSel');
+  if(sel && !sel.options.length){
+    ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-pro'].forEach(function(m){
+      const o = document.createElement('option'); o.value = m; o.textContent = m; sel.appendChild(o);
+    });
+    sel.value = aiModel();
+  }
+}
+function aiSaveKey(){
+  const inp = document.getElementById('aiKeyIn');
+  const v = (inp ? inp.value : '').trim();
+  setAiKey(v);
+  if(v && state.set.aiOn === 0) state.set.aiOn = 1;
+  save(); aiPaint();
+  toast(v ? 'حُفظ المفتاح' : 'حُذف المفتاح');
+}
+function aiClearKey(){
+  setAiKey('');
+  const inp = document.getElementById('aiKeyIn'); if(inp) inp.value = '';
+  aiPaint(); toast('حُذف المفتاح من هذا الجهاز');
+}
+function aiToggle(){
+  state.set.aiOn = state.set.aiOn === 0 ? 1 : 0; save(); aiPaint();
+}
+function aiPickModel(){
+  const sel = document.getElementById('aiModelSel');
+  if(sel){ state.set.aiModel = sel.value; save(); aiPaint(); }
+}
+function aiTest(){
+  const out = document.getElementById('aiTest');
+  const inp = document.getElementById('aiKeyIn');
+  const k = (inp ? inp.value : '').trim() || aiKey();
+  if(!k){ out.innerHTML = '<div class="note r"><b>الصق المفتاح أولًا</b></div>'; return; }
+  setAiKey(k); save();
+  out.innerHTML = '<div class="note b"><b>جارٍ الفحص…</b></div>';
+  fetch(AI_PROVIDERS.gemini.base + 'models', { headers: { 'x-goog-api-key': k } })
+    .then(function(r){ return r.text().then(function(t){ return { ok: r.ok, st: r.status, t: t }; }); })
+    .then(function(res){
+      if(!res.ok){
+        const e = AI_PROVIDERS.gemini.fail(res.st, res.t);
+        out.innerHTML = '<div class="note r"><b>لم ينجح</b>' + esc(AI_ERRS[e.code] || ('HTTP ' + res.st)) + '</div>';
+        return;
+      }
+      const j = JSON.parse(res.t);
+      const usable = (j.models || []).filter(function(m){
+        return (m.supportedGenerationMethods || []).indexOf('generateContent') >= 0 && /gemini/.test(m.name);
+      }).map(function(m){ return m.name.replace('models/', ''); });
+      const sel = document.getElementById('aiModelSel');
+      if(sel && usable.length){
+        sel.innerHTML = '';
+        usable.forEach(function(m){ const o = document.createElement('option'); o.value = m; o.textContent = m; sel.appendChild(o); });
+        const pref = usable.filter(function(m){ return /2\.5-flash$/.test(m); })[0]
+                  || usable.filter(function(m){ return /flash/.test(m) && !/lite/.test(m); })[0]
+                  || usable.filter(function(m){ return /flash/.test(m); })[0] || usable[0];
+        sel.value = pref; state.set.aiModel = pref;
+      }
+      if(state.set.aiOn === 0) state.set.aiOn = 1;
+      save(); aiPaint();
+      out.innerHTML = '<div class="note g"><b>المفتاح يعمل ✓</b>وجدت ' + usable.length + ' نموذجًا متاحًا، واخترت لك: <span class="ltr">' + esc(state.set.aiModel) + '</span>. جرّب الآن أي سؤال في تبويب المعلّم.</div>';
+    })
+    .catch(function(){
+      out.innerHTML = '<div class="note r"><b>تعذّر الاتصال</b>تأكد من الإنترنت ثم أعد المحاولة.</div>';
+    });
 }
 
 function paintAll(){ paintHome(); paintVocab(); }
