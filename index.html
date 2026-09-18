@@ -829,7 +829,7 @@ const DAY = 86400000, BOX_DAYS = [0,1,3,7,14,30];
 let state = load(), L = null, S = null, W = null, PATTERNS = null, DLG = null, GROUPS = null;
 
 function blank(){
-  return { w:{}, wr:{}, streak:{last:null,n:0}, mis:[], quiz:{}, packs:[], cur:'L1', chat:[], set:{rate:0.8, voice:'', aiProvider:'gemini', aiModel:'gemini-2.5-flash', aiOn:1, aiDay:{d:null,n:0}} };
+  return { w:{}, wr:{}, streak:{last:null,n:0}, mis:[], quiz:{}, packs:[], cur:'L1', chat:[], myWords:[], set:{rate:0.8, voice:'', aiProvider:'gemini', aiModel:'gemini-2.5-flash', aiOn:1, aiDay:{d:null,n:0}} };
 }
 function load(){
   let s = null;
@@ -1555,7 +1555,7 @@ function importProgress(){
 }
 function resetAll(){
   if(!confirm('سيُحذف كل تقدّمك: الكلمات المحفوظة، الأخطاء، سلسلة الأيام، والدروس المضافة. متأكد؟')) return;
-  try{ setAiKey(); }catch(e){}
+  try{ setAiKey(''); localStorage.removeItem(STROKE_LS); }catch(e){}
   state = blank(); save(); location.reload();
 }
 
@@ -1965,6 +1965,7 @@ function chatAction(a, v){
   if(a === 'new') return startSession('new');
   if(a === 'ai') return openModal('mdAI');
   if(a === 'more') return tutorDeeper(v);
+  if(a === 'add') return myWordAdd(v);
   if(a === 'clear'){ state.chat = []; save(); paintChat(); return; }
 }
 function tutorFromContext(){
@@ -2046,7 +2047,9 @@ const AI_PROVIDERS = {
       }
       const gc = { temperature: opts.temp == null ? 0.4 : opts.temp, maxOutputTokens: opts.max || 700 };
       if(opts.schema){ gc.responseMimeType = 'application/json'; gc.responseSchema = opts.schema; }
-      return { systemInstruction: sys ? { parts: [{ text: sys }] } : undefined, contents: contents, generationConfig: gc };
+      const req = { systemInstruction: sys ? { parts: [{ text: sys }] } : undefined, contents: contents, generationConfig: gc };
+      if(opts.web && !opts.schema) req.tools = [{ google_search: {} }];
+      return req;
     },
     parse: function(j){
       const c = j && j.candidates && j.candidates[0];
@@ -2114,7 +2117,7 @@ function aiCall(userText, opts){
         if(/quota/.test(m)) return rej(AIErr('quota'));
         if(/badkey/.test(m)) return rej(AIErr('badkey'));
         if(/offline/.test(m)) return rej(AIErr('offline'));
-        res('هذه إجابة تجريبية من المزوّد الوهمي. 你好 nǐ hǎo تعني «مرحبًا».');
+        res({ text: 'هذه إجابة تجريبية من المزوّد الوهمي. 你好 nǐ hǎo تعني «مرحبًا».', srcs: [{ t: 'مصدر تجريبي', u: 'https://example.com' }] });
       }, 120);
     });
   }
@@ -2134,7 +2137,8 @@ function aiCall(userText, opts){
     return r.text().then(function(txt){
       if(!r.ok) throw p.fail(r.status, txt);
       aiCount();
-      return p.parse(JSON.parse(txt));
+      const j = JSON.parse(txt);
+      return { text: p.parse(j), srcs: (typeof aiSrcs === 'function' ? aiSrcs(j) : []) };
     });
   }).catch(function(e){
     if(e && e.code) throw e;
@@ -2212,9 +2216,10 @@ function tutorAsk(q){
       return;
     }
     typingOn();
-    aiCall(t).then(function(txt){
+    aiAsk(t).then(function(r){
       typingOff();
-      chatAdd('a', chatFmt(txt) + aiFoot());
+      chatAdd('a', chatFmt(r.text) + srcHtml(r.srcs) + aiFoot()
+        + '<div class="trow">' + actBtn('➕ أضف هذه الكلمة لدروسي', 'add', t, 'g') + '</div>');
     }).catch(function(e){
       typingOff();
       const m = AI_ERRS[e && e.code] || AI_ERRS.http;
@@ -2229,8 +2234,8 @@ function tutorAsk(q){
 function tutorDeeper(q){
   if(!aiReady()) return openModal('mdAI');
   typingOn();
-  aiCall('اشرح لي بتوسّع: ' + q).then(function(txt){
-    typingOff(); chatAdd('a', chatFmt(txt) + aiFoot());
+  aiAsk('اشرح لي بتوسّع: ' + q).then(function(r){
+    typingOff(); chatAdd('a', chatFmt(r.text) + srcHtml(r.srcs) + aiFoot());
   }).catch(function(e){
     typingOff();
     chatAdd('a', '<p>' + esc(AI_ERRS[e && e.code] || AI_ERRS.http) + '</p>');
@@ -2313,9 +2318,142 @@ function aiTest(){
     });
 }
 
+/* ==========================================================================
+   بحث الإنترنت + حفظ الكلمات الجديدة في «كلماتي»
+   ========================================================================== */
+const STROKE_LS = 'hsk_strokes_v1';
+const STROKE_CDN = 'https://cdn.jsdelivr.net/npm/hanzi-writer-data@2.0.1/';
+let strokeCache = {};
+
+function loadStrokes(){
+  try{ strokeCache = JSON.parse(localStorage.getItem(STROKE_LS)) || {}; }catch(e){ strokeCache = {}; }
+  try{
+    window.HZ_DATA = window.HZ_DATA || {};
+    Object.keys(strokeCache).forEach(function(c){ if(strokeCache[c]) HZ_DATA[c] = strokeCache[c]; });
+  }catch(e){}
+}
+function saveStrokes(){ try{ localStorage.setItem(STROKE_LS, JSON.stringify(strokeCache)); }catch(e){} }
+function fetchStroke(c){
+  return fetch(STROKE_CDN + encodeURIComponent(c) + '.json', { mode: 'cors' })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){
+      if(d && d.strokes){ strokeCache[c] = d; window.HZ_DATA = window.HZ_DATA || {}; HZ_DATA[c] = d; return true; }
+      strokeCache[c] = 0; return false;          // 0 = لا توجد بيانات لهذا الحرف
+    })
+    .catch(function(){ return false; });          // انقطاع: لا نُفسد الكاش، نعيد لاحقًا
+}
+function ensureStrokes(chars){
+  const need = (chars || []).filter(function(c){
+    return /[一-鿿]/.test(c) && !(window.HZ_DATA && HZ_DATA[c]) && strokeCache[c] !== 0;
+  });
+  if(!need.length) return Promise.resolve(0);
+  return Promise.all(need.slice(0, 12).map(fetchStroke)).then(function(res){
+    saveStrokes();
+    return res.filter(Boolean).length;
+  });
+}
+
+/* ---------- مصادر البحث ---------- */
+function aiSrcs(j){
+  try{
+    const g = j.candidates[0].groundingMetadata || {};
+    const ch = g.groundingChunks || [];
+    return ch.map(function(c){
+      const w = c.web || {};
+      return { t: w.title || w.uri || '', u: w.uri || '' };
+    }).filter(function(s){ return s.u; }).slice(0, 3);
+  }catch(e){ return []; }
+}
+function srcHtml(srcs){
+  if(!srcs || !srcs.length) return '';
+  return '<div class="tles">🌐 من الإنترنت: ' + srcs.map(function(s){
+    return '<a href="' + esc(s.u) + '" target="_blank" rel="noopener">' + esc((s.t || '').slice(0, 30)) + '</a>';
+  }).join(' · ') + '</div>';
+}
+
+/* ---------- نداء ذكي: بحث ويب ثم تراجع تلقائي ---------- */
+function aiAsk(text, opts){
+  opts = opts || {};
+  const withWeb = Object.assign({}, opts, { web: opts.web === false ? false : true });
+  return aiCall(text, withWeb).catch(function(e){
+    if(withWeb.web && e && (e.code === 'http' || e.code === 'model' || e.code === 'parse')){
+      return aiCall(text, Object.assign({}, opts, { web: false }));
+    }
+    throw e;
+  });
+}
+
+/* ---------- كلماتي: حفظ كلمة جديدة كدرس شخصي ---------- */
+const MYWORD_SCHEMA = {
+  type: 'object',
+  required: ['hz', 'py', 'syl', 'm', 'tr', 'ex_hz', 'ex_py', 'ex_ar'],
+  properties: {
+    hz: { type: 'string' }, py: { type: 'string' },
+    syl: { type: 'array', items: { type: 'string' } },
+    m: { type: 'string' }, tr: { type: 'string' },
+    ex_hz: { type: 'string' }, ex_py: { type: 'string' }, ex_ar: { type: 'string' }
+  }
+};
+function buildMyLesson(){
+  const list = state.myWords || [];
+  const i = LESSONS.map(function(l){ return l.id; }).indexOf('LX');
+  if(!list.length){ if(i >= 0) LESSONS.splice(i, 1); return; }
+  const sents = {}, words = [];
+  list.forEach(function(x, n){
+    const k = 'my' + n;
+    sents[k] = { t: [[x.ex_hz, x.ex_py, 'مثال']], ar: x.ex_ar };
+    const chars = x.hz.split('');
+    words.push({
+      id: n + 1, g: 1,
+      ch: chars.map(function(c, j){ return [c, (x.syl && x.syl[j]) || '']; }),
+      dpy: x.py, m: x.m, tr: x.tr, ex: k
+    });
+  });
+  const les = { id: 'LX', title: 'كلماتي الخاصة', tag: 'من المعلّم',
+    groups: { 1: 'كلمات أضفتها بنفسك' }, sents: sents, words: words, patterns: [], dialogue: [] };
+  if(i >= 0) LESSONS[i] = les; else LESSONS.push(les);
+  tagLessons();
+}
+function myWordAdd(q){
+  if(!aiReady()){ chatAdd('a', '<p>هذه الميزة تحتاج المعلّم الذكي.</p><div class="trow">' + actBtn('⚙ فعّله الآن', 'ai', '') + '</div>'); return; }
+  typingOn();
+  const sys = 'أنت معجم صيني-عربي دقيق. استخرج الكلمة الصينية المقصودة من سؤال الطالب وأعد بياناتها.'
+    + ' hz = الحرف أو الحروف الصينية المبسّطة فقط. py = البينيين كاملًا بعلامات النغمة.'
+    + ' syl = مصفوفة نطق كل حرف على حدة بالترتيب ونفس عدد الحروف. m = المعنى بالعربية بكلمات قليلة.'
+    + ' tr = حيلة حفظ عربية قصيرة تربط أجزاء الحرف بمعناه. ex_hz = جملة مثال قصيرة بالصيني بلا علامة نهاية.'
+    + ' ex_py = نطق الجملة. ex_ar = ترجمتها العربية.';
+  aiCall(q, { system: sys, schema: MYWORD_SCHEMA, temp: 0.2, max: 500, web: false })
+    .then(function(r){
+      let d;
+      try{ d = JSON.parse(r.text); }catch(e){ throw AIErr('parse'); }
+      const hz = String(d.hz || '').replace(/[^一-鿿]/g, '');
+      if(!hz || hz.length > 6 || !d.m) throw AIErr('parse');
+      state.myWords = (state.myWords || []).filter(function(x){ return x.hz !== hz; });
+      state.myWords.push({ hz: hz, py: String(d.py || ''), syl: d.syl || [], m: String(d.m || ''),
+        tr: String(d.tr || ''), ex_hz: String(d.ex_hz || '').replace(/[。！？.!?]+$/, ''),
+        ex_py: String(d.ex_py || ''), ex_ar: String(d.ex_ar || '') });
+      save(); buildMyLesson(); AIDX = null; paintAll();
+      const key = 'LX:' + state.myWords.length;
+      typingOff();
+      chatAdd('a', '<p><b>أُضيفت إلى «كلماتي الخاصة» ✓</b> صارت تظهر في المفردات والاختبارات والتكرار المتباعد.</p>'
+        + tWordCard({ w: findWord(key), les: LESSONS[LESSONS.length - 1] })
+        + '<p class="sml muted" id="strk">جارٍ تنزيل بيانات رسم الحروف…</p>');
+      ensureStrokes(hz.split('')).then(function(n){
+        const el2 = document.getElementById('strk');
+        if(el2) el2.textContent = n ? ('✓ تنزّلت خطوات رسم ' + n + ' حرفًا — زر «ارسم الحرف» يعمل الآن.')
+                                    : 'تعذّر تنزيل خطوات الرسم لهذا الحرف (بقية المزايا تعمل).';
+      });
+    })
+    .catch(function(e){
+      typingOff();
+      chatAdd('a', '<p>' + esc(AI_ERRS[e && e.code] || AI_ERRS.http) + '</p>');
+    });
+}
+
 function paintAll(){ paintHome(); paintVocab(); }
 function boot(){
   loadPacks(); tagLessons();
+  try{ loadStrokes(); buildMyLesson(); }catch(e){}
   useLesson(state.cur || 'L1');
   initVoices(); markRate(); checkStorage();
   maybeInstallHint();
