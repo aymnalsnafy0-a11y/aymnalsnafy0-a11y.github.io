@@ -1,4 +1,4 @@
-var CACHE = 'hsk-v3';
+var CACHE = 'hsk-v4';
 var ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', function(e){
@@ -19,6 +19,9 @@ function isDoc(req){
 self.addEventListener('fetch', function(e){
   var req = e.request;
   if(req.method !== 'GET') return;
+
+  // اترك الطلبات خارج نطاقنا للشبكة مباشرة (بيانات رسم الحروف/الذكاء لاحقًا)
+  try{ if(new URL(req.url).origin !== self.location.origin) return; }catch(e){ return; }
 
   // صفحة التطبيق: الشبكة أولًا (أحدث نسخة دائمًا)، والمحفوظة احتياطًا عند انقطاع الإنترنت
   if(isDoc(req)){

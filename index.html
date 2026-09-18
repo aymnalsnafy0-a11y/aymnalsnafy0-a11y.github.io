@@ -223,6 +223,75 @@
   details summary{ cursor:pointer; font-weight:700; color:var(--blue); font-size:14px; }
   ul.tight{ margin:6px 0; padding-inline-start:20px; }
   ul.tight li{ margin:3px 0; }
+  /* ===== المعلّم ===== */
+  #pg-chat{ padding-bottom:62px; }
+  .msg{ display:flex; margin-bottom:9px; }
+  .msg.me{ justify-content:flex-end; }
+  .msg.ai{ justify-content:flex-start; }
+  .bubble{
+    max-width:92%; border-radius:15px; padding:9px 12px; background:#fff;
+    border:1px solid var(--line); box-shadow:var(--sh); font-size:14.5px; line-height:1.8;
+    -webkit-user-select:text; user-select:text;
+  }
+  .msg.me .bubble{ background:var(--blue); color:#fff; border-color:var(--blue); border-bottom-right-radius:5px; }
+  .msg.ai .bubble{ border-bottom-left-radius:5px; }
+  .bubble p{ margin:3px 0; }
+  .bubble b{ color:inherit; }
+  .tcard{ border:1px solid #c3ddf5; border-inline-start:5px solid var(--blue); background:var(--blue-bg);
+          border-radius:11px; padding:8px 10px; margin:6px 0; }
+  .tcard .thz{ font-size:25px; font-weight:700; color:#0f2d4a; line-height:1.3; }
+  .tcard .thz .hz{ font-size:25px; }
+  .tcard .tpy{ font-size:14px; font-weight:700; }
+  .tcard .tmean{ font-size:14.5px; font-weight:700; margin-bottom:3px; }
+  .tcard .ttrick{ font-size:13px; background:var(--violet-bg); border:1px solid #ddd0f2;
+                  border-radius:9px; padding:6px 8px; margin:6px 0; line-height:1.75; }
+  .tcard .tex{ font-size:13.5px; background:#fff; border:1px solid #cfe2f4; border-radius:9px; padding:6px 8px; }
+  .tcard .tex .hz{ font-size:18px; }
+  .tcard .tar{ display:block; color:#12456f; }
+  .tcard .tles{ font-size:11px; color:var(--muted); margin-top:5px; }
+  .trow{ display:flex; gap:6px; flex-wrap:wrap; margin-top:7px; }
+  .cact{
+    border:1px solid var(--blue); background:#fff; color:var(--blue); border-radius:10px;
+    padding:6px 10px; font-family:inherit; font-size:12.5px; font-weight:700; cursor:pointer;
+  }
+  .cact.g{ border-color:var(--green); color:var(--green); }
+  .cact.spk{ border:0; background:none; font-size:16px; padding:2px 4px; }
+  .msg.me .cact{ background:rgba(255,255,255,.15); color:#fff; border-color:rgba(255,255,255,.5); }
+  .tsent{ border-bottom:1px dotted var(--line); padding:5px 0; }
+  .tsent .hz{ font-size:18px; }
+  .tsent .tar{ font-size:12.5px; color:var(--muted); display:block; }
+  .tchips{ display:flex; gap:6px; flex-wrap:wrap; margin-top:7px; }
+  .tchip{
+    border:1px solid #c3ddf5; background:var(--blue-bg); color:var(--blue); border-radius:99px;
+    padding:5px 11px; font-family:inherit; font-size:12.5px; cursor:pointer; font-weight:700;
+  }
+  .tdots span{ display:inline-block; width:7px; height:7px; margin:0 2px; border-radius:50%;
+               background:var(--muted); animation:tdot 1s infinite; }
+  .tdots span:nth-child(2){ animation-delay:.15s } .tdots span:nth-child(3){ animation-delay:.3s }
+  @keyframes tdot{ 0%,60%,100%{opacity:.25} 30%{opacity:1} }
+
+  #chatBar{
+    display:none; position:fixed; right:0; left:0; bottom:calc(76px + env(safe-area-inset-bottom));
+    z-index:44; padding:7px 9px; background:#fff; border-top:1px solid var(--line);
+  }
+  body.chat #chatBar{ display:block; }
+  body.chat .toast{ bottom:148px; }
+  #chatBar .inrow{ display:flex; gap:7px; max-width:720px; margin:0 auto; align-items:flex-end; }
+  #chatIn{
+    flex:1; min-height:44px; max-height:110px; border:1px solid var(--line); border-radius:12px;
+    padding:11px 12px; font-family:inherit; font-size:15px; resize:none; background:#fff;
+  }
+  #chatBar .btn{ padding:12px 15px; }
+  .fab{
+    display:none; position:fixed; inset-inline-start:14px; bottom:calc(88px + env(safe-area-inset-bottom));
+    z-index:44; width:52px; height:52px; border-radius:50%; background:var(--green); color:#fff;
+    border:0; font-size:23px; cursor:pointer; box-shadow:0 6px 18px rgba(16,40,70,.28);
+  }
+  body.showfab .fab{ display:block; }
+  @media (max-width:430px){
+    nav button{ font-size:10px; padding:5px 0; }
+    nav button b{ font-size:17px; }
+  }
 </style>
 </head>
 <body>
@@ -393,6 +462,15 @@
 <!-- ============ الاختبار ============ -->
 <section class="page" id="pg-quiz"><div id="quizWrap"></div></section>
 
+
+<!-- ============ المعلّم ============ -->
+<section class="page" id="pg-chat">
+  <div id="chatLog"></div>
+  <div style="text-align:center;margin:10px 0 0">
+    <button class="cact" data-a="clear" data-v="" onclick="chatAction('clear','')">🗑 مسح المحادثة</button>
+  </div>
+</section>
+
 </main>
 
 <nav>
@@ -401,7 +479,17 @@
   <button data-p="gram" onclick="go('gram')"><b>🧩</b>القواعد</button>
   <button data-p="dlg" onclick="go('dlg')"><b>🗣</b>الحوار</button>
   <button data-p="quiz" onclick="go('quiz')"><b>🎯</b>الاختبار</button>
+  <button data-p="chat" onclick="go('chat')"><b>🎓</b>المعلّم</button>
 </nav>
+
+<div id="chatBar">
+  <div class="inrow">
+    <textarea id="chatIn" rows="1" placeholder="اسأل عن أي كلمة أو قاعدة…" dir="auto"></textarea>
+    <button class="btn" onclick="chatSend()">إرسال</button>
+  </div>
+</div>
+<button class="fab" onclick="tutorFromContext()" title="اسأل المعلّم">💬</button>
+
 
 <!-- نافذة الرسم والكتابة -->
 <div class="modal" id="mdWrite">
@@ -702,7 +790,7 @@ const DAY = 86400000, BOX_DAYS = [0,1,3,7,14,30];
 let state = load(), L = null, S = null, W = null, PATTERNS = null, DLG = null, GROUPS = null;
 
 function blank(){
-  return { w:{}, wr:{}, streak:{last:null,n:0}, mis:[], quiz:{}, packs:[], cur:'L1', set:{rate:0.8, voice:''} };
+  return { w:{}, wr:{}, streak:{last:null,n:0}, mis:[], quiz:{}, packs:[], cur:'L1', chat:[], set:{rate:0.8, voice:''} };
 }
 function load(){
   let s = null;
@@ -762,6 +850,7 @@ function tagLessons(){
   LESSONS.forEach(les => {
     les.words.forEach(w => { w._L = les.id; w._S = les.sents; });
   });
+  try{ AIDX = null; }catch(e){}
 }
 const wkey = w => w._L + ':' + w.id;
 function findWord(key){
@@ -903,6 +992,7 @@ function go(p){
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on', b.dataset.p===p));
   try{ window.scrollTo({top:0, behavior:'smooth'}); }catch(e){ window.scrollTo(0,0); }
   if(p==='quiz' && !quiz.live) quizIntro();
+  try{ document.body.classList.toggle('chat', p==='chat'); document.body.classList.toggle('showfab', p==='vocab'||p==='gram'||p==='dlg'); }catch(e){}
 }
 function openModal(id){ if(id==='mdLesson') paintLessonSheet(); if(id==='mdPack') paintInstalled(); $('#'+id).classList.add('on'); }
 function closeModal(id){
@@ -1482,12 +1572,400 @@ function tickClock(){
   lastClock = s;
   el.innerHTML = '<b>' + s + '</b><span>توقيت مكة</span>';
 }
+/* ==========================================================================
+   المعلّم — محرّك داخلي يعمل بلا إنترنت وبلا مفتاح
+   يعتمد كليًا على بيانات LESSONS الموجودة، ولا يستخدم onclick بنصوص مُدرجة:
+   كل الأزرار عبر data-a / data-v ومستمع واحد مفوَّض (esc لا يهرّب ').
+   ========================================================================== */
+const TCHAT_MAX = 30;
+const AR_DIA = /[ً-ْٰـ]/g;
+const PYMAP = {'ā':'a','á':'a','ǎ':'a','à':'a','ē':'e','é':'e','ě':'e','è':'e',
+  'ī':'i','í':'i','ǐ':'i','ì':'i','ō':'o','ó':'o','ǒ':'o','ò':'o',
+  'ū':'u','ú':'u','ǔ':'u','ù':'u','ǖ':'v','ǘ':'v','ǚ':'v','ǜ':'v','ü':'v'};
+const T_STOP = ['ما','ماهو','ماهي','معني','وش','ايش','شنو','يعني','اشرح','اشرحلي','وضح','لي','هي','هو',
+  'كلمه','الكلمه','هذه','هذا','كيف','اقول','بالصيني','بالصينيه','الصينيه','الفرق','فرق','بين','و','في',
+  'من','علي','عن','هل','اريد','ابي','ابغي','ابغا','عايز','تمرين','جمل','جمله','مثال','امثله','قاعده',
+  'القاعده','ليش','لماذا','متي','استخدم','ايه','ال','مع','الي','ان','انا'];
+
+function arNorm(s){
+  return String(s == null ? '' : s).toLowerCase()
+    .replace(AR_DIA, '')
+    .replace(/[أإآٱ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه')
+    .replace(/ؤ/g, 'و').replace(/ئ/g, 'ي')
+    .replace(/[?؟!.,،؛:«»"'()\[\]\/\\\-_]/g, ' ')
+    .replace(/\s+/g, ' ').trim();
+}
+function pyFold(s){
+  return String(s == null ? '' : s).toLowerCase()
+    .replace(/[^\x00-\x7f]/g, function(c){ return PYMAP[c] || c; })
+    .replace(/[\s']/g, '');
+}
+const hasHz = s => /[一-鿿]/.test(String(s || ''));
+const onlyHz = s => (String(s || '').match(/[一-鿿]/g) || []).join('');
+function arTokens(s){
+  return arNorm(s).split(' ').filter(function(t){ return t.length >= 2 && T_STOP.indexOf(t) < 0; });
+}
+
+/* ---------- الفهرس ---------- */
+let AIDX = null;
+function buildTutorIndex(){
+  AIDX = { words: [], sents: [], pats: [] };
+  LESSONS.forEach(function(les){
+    (les.words || []).forEach(function(w){
+      const hz = w.ch.map(function(c){ return c[0]; }).join('');
+      AIDX.words.push({
+        w: w, les: les, hz: hz,
+        chars: w.ch.map(function(c){ return c[0]; }),
+        pyf: pyFold(wordPy(w)),
+        syl: w.ch.map(function(c){ return pyFold(c[1]); }),
+        ar: arNorm(w.m),
+        arT: arTokens(w.m)
+      });
+    });
+    Object.keys(les.sents || {}).forEach(function(k){
+      const s = les.sents[k];
+      AIDX.sents.push({ k: k, s: s, les: les, hz: s.t.map(function(t){ return t[0]; }).join(''),
+        pyf: pyFold(s.t.map(function(t){ return t[1]; }).join('')), ar: arNorm(s.ar) });
+    });
+    (les.patterns || []).forEach(function(p){
+      AIDX.pats.push({ p: p, les: les, ar: arNorm(p.name), keys: (p.key || []).join(''), f: p.f });
+    });
+  });
+}
+function idx(){ if(!AIDX) buildTutorIndex(); return AIDX; }
+
+/* ---------- البحث ---------- */
+function findWordsT(q, limit){
+  const hzq = onlyHz(q), pyq = pyFold(q.replace(/[؀-ۿ]/g, ' ')), toks = arTokens(q);
+  const out = [];
+  idx().words.forEach(function(e){
+    let sc = 0;
+    if(hzq){
+      if(e.hz === hzq) sc = Math.max(sc, 100);
+      else if(hzq.indexOf(e.hz) >= 0) sc = Math.max(sc, 92);
+      else if(e.hz.indexOf(hzq) >= 0) sc = Math.max(sc, 88);
+      else if(e.chars.some(function(c){ return hzq.indexOf(c) >= 0; })) sc = Math.max(sc, 70);
+    }
+    if(pyq.length >= 2){
+      if(e.pyf === pyq) sc = Math.max(sc, 96);
+      else if(e.pyf.indexOf(pyq) === 0) sc = Math.max(sc, 74);
+      else if(pyq.length >= 3 && e.pyf.indexOf(pyq) > 0) sc = Math.max(sc, 60);
+      else if(e.syl.indexOf(pyq) >= 0) sc = Math.max(sc, 66);
+    }
+    toks.forEach(function(t){
+      if(e.ar === t) sc = Math.max(sc, 95);
+      else if(e.arT.indexOf(t) >= 0) sc = Math.max(sc, 86);
+      else if(t.length >= 3 && e.ar.indexOf(t) >= 0) sc = Math.max(sc, 64);
+    });
+    if(sc) out.push({ e: e, sc: sc });
+  });
+  out.sort(function(a, b){ return b.sc - a.sc; });
+  return out.slice(0, limit || 5);
+}
+function findSentsT(q, limit){
+  const hzq = onlyHz(q), toks = arTokens(q), out = [];
+  idx().sents.forEach(function(e){
+    let sc = 0;
+    if(hzq && e.hz.indexOf(hzq) >= 0) sc = 80;
+    toks.forEach(function(t){ if(t.length >= 3 && e.ar.indexOf(t) >= 0) sc = Math.max(sc, 70); });
+    if(sc) out.push({ e: e, sc: sc });
+  });
+  out.sort(function(a, b){ return b.sc - a.sc; });
+  return out.slice(0, limit || 4);
+}
+function findPatsT(q){
+  const hzq = onlyHz(q), toks = arTokens(q), out = [];
+  idx().pats.forEach(function(e){
+    let sc = 0;
+    if(hzq && e.keys && e.keys.indexOf(hzq) >= 0) sc = 85;
+    if(hzq && e.f && e.f.indexOf(hzq) >= 0) sc = Math.max(sc, 80);
+    toks.forEach(function(t){ if(e.ar.indexOf(t) >= 0) sc = Math.max(sc, 72); });
+    if(sc) out.push({ e: e, sc: sc });
+  });
+  out.sort(function(a, b){ return b.sc - a.sc; });
+  return out.slice(0, 2);
+}
+
+/* ---------- بطاقات الرد ---------- */
+function actBtn(label, a, v, cls){
+  return '<button class="cact ' + (cls || '') + '" data-a="' + esc(a) + '" data-v="' + esc(v == null ? '' : v) + '">' + label + '</button>';
+}
+function spk(text){ return actBtn('🔊', 'speak', text, 'spk'); }
+
+function tWordCard(e){
+  const w = e.w, k = wkey(w), st = status(w);
+  const ex = (w.ex && w._S && w._S[w.ex]) ? w._S[w.ex] : null;
+  return '<div class="tcard">'
+    + '<div class="thz"><span class="hz">' + esc(wordHz(w)) + '</span> ' + spk(speakHz(w)) + '</div>'
+    + '<div class="tpy">' + wordPyHtml(w) + '</div>'
+    + '<div class="tmean">' + esc(w.m) + '</div>'
+    + (w.tr ? '<div class="ttrick"><b>حيلة الحفظ:</b> ' + w.tr + '</div>' : '')
+    + (ex ? '<div class="tex"><span class="hz">' + esc(sentHz(w.ex, w._S)) + '</span> ' + spk(sentHz(w.ex, w._S))
+        + sentPyHtml(w.ex, w._S) + '<span class="tar">' + esc(ex.ar) + '</span></div>' : '')
+    + '<div class="trow">'
+      + actBtn('افتح البطاقة', 'word', k)
+      + actBtn('✍ ارسم الحرف', 'write', k)
+      + actBtn('اختبرني عليها', 'drill', k, 'g')
+    + '</div>'
+    + '<div class="tles">' + esc(e.les.title) + ' · '
+    + (st === 'known' ? 'محفوظة عندك ✓' : st === 'lrn' ? 'قيد الحفظ' : 'لم تبدأها بعد') + '</div>'
+    + '</div>';
+}
+function tPatCard(e){
+  const p = e.p, m = e.les.sents;
+  return '<div class="tcard">'
+    + '<div class="tmean">' + esc(p.name) + '</div>'
+    + '<p><b>القالب:</b> ' + p.f.replace(/[一-鿿]+/g, function(x){ return '<span class="hz">' + x + '</span>'; }) + '</p>'
+    + '<div class="tex"><span class="hz">' + esc(sentHz(p.s, m)) + '</span> ' + spk(sentHz(p.s, m))
+      + sentPyHtml(p.s, m) + '<span class="tar">' + esc(m[p.s].ar) + '</span></div>'
+    + '<p>' + p.why + '</p>'
+    + '<p>' + p.bad + '</p>'
+    + '<div class="trow">' + actBtn('افتح القواعد', 'go', 'gram') + '</div>'
+    + '<div class="tles">' + esc(e.les.title) + '</div></div>';
+}
+function tSentList(list, title){
+  return '<p><b>' + esc(title) + '</b></p>' + list.map(function(x){
+    return '<div class="tsent"><span class="hz">' + esc(sentHz(x.e.k, x.e.les.sents)) + '</span> '
+      + spk(sentHz(x.e.k, x.e.les.sents))
+      + sentPyHtml(x.e.k, x.e.les.sents)
+      + '<span class="tar">' + esc(x.e.s.ar) + '</span></div>';
+  }).join('');
+}
+function tChips(list){
+  return '<div class="tchips">' + list.map(function(q){
+    return '<button class="tchip cact" data-a="ask" data-v="' + esc(q) + '">' + esc(q) + '</button>';
+  }).join('') + '</div>';
+}
+
+/* ---------- النوايا ---------- */
+function tutorIntent(s){
+  if(/اختبرني|اختبار|تمرين|دربني|درب ني|مرني|كويز/.test(s)) return 'drill';
+  if(/اذاكر|المستحق|مراجعه اليوم|ابدا|خطه|اليوم/.test(s)) return 'plan';
+  if(/الفرق|فرق بين|مقابل/.test(s)) return 'diff';
+  if(/اكتب|ارسم|خطوات|كتابه/.test(s)) return 'write';
+  if(/قاعده|قواعد|تركيب|ترتيب|نحو|متي استخدم|ليش|لماذا/.test(s)) return 'grammar';
+  if(/جمل|جمله|مثال|امثله/.test(s)) return 'sentences';
+  if(/مساعده|ساعدني|وش تقدر|ماذا تستطيع|شنو تسوي|help/.test(s)) return 'help';
+  return 'lookup';
+}
+
+function tutorHelp(){
+  return '<p><b>أنا معلّمك داخل التطبيق 🎓</b> أعرف كل كلمات دروسك وأجيب بلا إنترنت. جرّب:</p>'
+    + tChips(['ما معنى 图书馆؟', 'كيف أقول «أنا طالب»؟', 'الفرق بين 买 و 卖',
+              'اشرح قاعدة 也', 'جمل فيها 的', 'اختبرني', 'ماذا أذاكر اليوم؟']);
+}
+
+function tutorPlan(){
+  const all = LESSONS.reduce(function(a, l){ return a.concat(l.words); }, []);
+  const due = all.filter(isDue).length;
+  const nw = all.filter(function(w){ return status(w) === 'new'; }).length;
+  const kn = all.filter(function(w){ return status(w) === 'known'; }).length;
+  const weak = pickWords(4, true).map(function(w){ return wordHz(w); }).join(' · ');
+  return '<p><b>خطة اليوم</b></p>'
+    + '<p>🔥 سلسلتك: ' + state.streak.n + ' يومًا · محفوظة: ' + kn + ' · مستحقّة الآن: ' + due + ' · لم تبدأها: ' + nw + '</p>'
+    + (weak ? '<p>أضعف كلماتك: <span class="hz">' + esc(weak) + '</span></p>' : '')
+    + '<div class="trow">'
+      + actBtn('راجع المستحقّ', 'due', '', 'g')
+      + actBtn('كلمات جديدة', 'new', '')
+      + actBtn('اختبار سريع', 'quiz', '6')
+    + '</div>';
+}
+
+/* ---------- تمرين داخل المحادثة ---------- */
+let tDrill = null;
+function tutorDrill(key){
+  let w = key ? findWord(key) : null;
+  if(!w){ const p = pickWords(1, true); w = p && p[0]; }
+  if(!w) return '<p>لا توجد كلمات بعد.</p>';
+  quiz.all = true;
+  const opts = distract(w, Math.random() < 0.5 ? 'm' : 'h');
+  const askHz = opts[0].txt.indexOf('class="hz"') >= 0;
+  tDrill = { key: wkey(w), opts: opts.map(function(o){ return { k: wkey(o.w), ok: o.ok }; }) };
+  return '<p><b>تمرين سريع</b></p>'
+    + (askHz ? '<p>أي حرف يعني: «' + esc(w.m) + '» ؟</p>'
+             : '<p>ما معنى <span class="hz">' + esc(wordHz(w)) + '</span>؟ ' + spk(speakHz(w)) + '</p>')
+    + '<div class="trow">' + opts.map(function(o, i){
+        return actBtn(o.txt, 'ans', String(i));
+      }).join('') + '</div>';
+}
+function tutorDrillAnswer(i){
+  if(!tDrill){ chatAdd('a', '<p>انتهى هذا التمرين. اكتب «اختبرني» لتمرين جديد.</p>'); return; }
+  const picked = tDrill.opts[+i], right = tDrill.opts.filter(function(o){ return o.ok; })[0];
+  const rw = right ? findWord(right.k) : null;
+  const ok = picked && picked.ok;
+  const w = findWord(tDrill.key);
+  if(w) grade(w, !!ok);
+  tDrill = null;
+  chatAdd('a', (ok ? '<p><b>✓ إجابة صحيحة</b> — رفعت الكلمة درجة في خطة التكرار.</p>'
+                   : '<p><b>✗ غير صحيحة.</b> الصواب: <span class="hz">' + esc(rw ? wordHz(rw) : '') + '</span> '
+                     + esc(rw ? rw.m : '') + '</p>')
+    + '<div class="trow">' + actBtn('تمرين آخر', 'drill', '', 'g') + actBtn('اختبار كامل', 'quiz', '6') + '</div>');
+}
+
+/* ---------- المحرّك ---------- */
+function tutorAnswer(raw){
+  const q = String(raw || '').trim();
+  if(!q) return tutorHelp();
+  const s = arNorm(q), intent = tutorIntent(s);
+
+  if(intent === 'drill'){
+    const t = findWordsT(q, 1);
+    return tutorDrill(t.length && t[0].sc >= 80 ? wkey(t[0].e.w) : null);
+  }
+  if(intent === 'plan') return tutorPlan();
+  if(intent === 'help') return tutorHelp();
+
+  if(intent === 'diff'){
+    const hz = onlyHz(q).split('');
+    let a = null, b = null;
+    if(hz.length >= 2){
+      const ra = findWordsT(hz[0], 1), rb = findWordsT(hz[hz.length - 1], 1);
+      a = ra[0] && ra[0].e; b = rb[0] && rb[0].e;
+    }
+    if(!a || !b || a.w === b.w){
+      const parts = s.split(/\s+و\s+|\s+او\s+/).filter(function(x){ return x.length > 1; });
+      if(parts.length >= 2){
+        const ra2 = findWordsT(parts[parts.length - 2], 1), rb2 = findWordsT(parts[parts.length - 1], 1);
+        a = (ra2[0] && ra2[0].e) || a; b = (rb2[0] && rb2[0].e) || b;
+      }
+    }
+    if(a && b && a.w !== b.w){
+      const sameG = a.les === b.les && a.w.g === b.w.g;
+      return '<p><b>المقارنة</b></p>' + tWordCard(a) + tWordCard(b)
+        + '<p>' + (sameG ? 'الكلمتان من نفس المجموعة، فالفرق في المعنى والاستعمال — راجع حيلة الحفظ في كل بطاقة.'
+                         : 'لاحظ اختلاف المعنى أعلاه، وانطق الكلمتين متتاليتين لتثبّت الفرق في النغمة.') + '</p>';
+    }
+  }
+
+  if(intent === 'write'){
+    const r = findWordsT(q, 1);
+    if(r.length) return '<p>لنكتب <span class="hz">' + esc(wordHz(r[0].e.w)) + '</span> خطوة بخطوة:</p>'
+      + '<div class="trow">' + actBtn('✍ افتح لوحة الكتابة', 'write', wkey(r[0].e.w), 'g') + '</div>';
+  }
+
+  if(intent === 'grammar'){
+    const p = findPatsT(q);
+    if(p.length) return tPatCard(p[0].e);
+  }
+
+  if(intent === 'sentences'){
+    const se = findSentsT(q, 4);
+    if(se.length) return tSentList(se, 'جمل من دروسك:');
+  }
+
+  // بحث عام
+  const wr = findWordsT(q, 4), pr = findPatsT(q), sr = findSentsT(q, 3);
+  if(wr.length && wr[0].sc >= 60){
+    let html = tWordCard(wr[0].e);
+    if(wr.length > 1 && wr[1].sc >= 80){
+      html += '<p class="sml">نتائج قريبة:</p>' + tChips(wr.slice(1, 4).map(function(x){ return 'اشرح ' + wordHz(x.e.w); }));
+    }
+    const rel = sr.filter(function(x){ return x.e.hz.indexOf(wr[0].e.hz) >= 0; }).slice(0, 2);
+    if(rel.length) html += tSentList(rel, 'جمل تستخدمها:');
+    return html;
+  }
+  if(pr.length) return tPatCard(pr[0].e);
+  if(sr.length) return tSentList(sr, 'أقرب جمل وجدتها:');
+
+  return '<p>ما لقيت هذه الكلمة في دروسك المحمّلة (' + LESSONS.length + ' دروس).</p>'
+    + '<p class="sml">جرّب كتابتها بالحرف الصيني أو بالبينيين، أو اسألني بصيغة أخرى:</p>'
+    + tChips(['ماذا أذاكر اليوم؟', 'اختبرني', 'ما معنى 老师؟', 'مساعدة']);
+}
+
+/* ---------- الواجهة ---------- */
+function chatAdd(role, html){
+  state.chat = (state.chat || []).concat([{ r: role, h: html, at: Date.now() }]);
+  if(state.chat.length > TCHAT_MAX) state.chat = state.chat.slice(-TCHAT_MAX);
+  save(); paintChat(true);
+}
+function paintChat(scroll){
+  const log = document.getElementById('chatLog');
+  if(!log) return;
+  const msgs = state.chat || [];
+  log.innerHTML = msgs.length
+    ? msgs.map(function(m){
+        return '<div class="msg ' + (m.r === 'u' ? 'me' : 'ai') + '"><div class="bubble">' + m.h + '</div></div>';
+      }).join('')
+    : '<div class="msg ai"><div class="bubble">' + tutorHelp() + '</div></div>';
+  if(scroll) setTimeout(function(){ try{ window.scrollTo(0, document.body.scrollHeight); }catch(e){} }, 40);
+}
+function tutorAsk(q){
+  try{
+    const t = String(q || '').trim();
+    if(!t) return;
+    chatAdd('u', esc(t));
+    chatAdd('a', tutorAnswer(t));
+  }catch(e){
+    try{ chatAdd('a', '<p>صار خطأ بسيط عندي. جرّب صياغة أخرى أو اكتب «مساعدة».</p>'); }catch(_){}
+  }
+}
+function chatSend(){
+  const inp = document.getElementById('chatIn');
+  if(!inp) return;
+  const v = inp.value;
+  inp.value = '';
+  tutorAsk(v);
+}
+function chatAction(a, v){
+  if(a === 'speak') return speak(v);
+  if(a === 'ask') return tutorAsk(v);
+  if(a === 'word') return openWord(v);
+  if(a === 'write') return openWrite(v);
+  if(a === 'go') return go(v);
+  if(a === 'drill') return chatAdd('a', tutorDrill(v || null));
+  if(a === 'ans') return tutorDrillAnswer(v);
+  if(a === 'quiz') return quizStart(parseInt(v || '6', 10), true);
+  if(a === 'due') return startSession('due');
+  if(a === 'new') return startSession('new');
+  if(a === 'clear'){ state.chat = []; save(); paintChat(); return; }
+}
+function tutorFromContext(){
+  try{
+    const cur = (typeof vList !== 'undefined' && vList && vList[vPos]) ? vList[vPos] : null;
+    go('chat');
+    if(cur){
+      const inp = document.getElementById('chatIn');
+      if(inp && !inp.value) inp.value = 'اشرح ' + wordHz(cur);
+    }
+  }catch(e){ go('chat'); }
+}
+function fitChatBar(){
+  try{
+    const bar = document.getElementById('chatBar'); if(!bar || !window.visualViewport) return;
+    const vv = window.visualViewport;
+    const gap = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+    bar.style.transform = gap ? 'translateY(-' + gap + 'px)' : '';
+  }catch(e){}
+}
+function initTutor(){
+  buildTutorIndex();
+  paintChat();
+  const log = document.getElementById('chatLog');
+  if(log) log.addEventListener('click', function(e){
+    try{
+      let b = e.target;
+      while(b && b !== log && !(b.classList && b.classList.contains('cact'))) b = b.parentNode;
+      if(!b || b === log) return;
+      chatAction(b.getAttribute('data-a'), b.getAttribute('data-v'));
+    }catch(err){ toast('تعذّر تنفيذ هذا الأمر'); }
+  });
+  const inp = document.getElementById('chatIn');
+  if(inp) inp.addEventListener('keydown', function(e){
+    if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); chatSend(); }
+  });
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', fitChatBar);
+    window.visualViewport.addEventListener('scroll', fitChatBar);
+  }
+}
+
 function paintAll(){ paintHome(); paintVocab(); }
 function boot(){
   loadPacks(); tagLessons();
   useLesson(state.cur || 'L1');
   initVoices(); markRate(); checkStorage();
   maybeInstallHint();
+  initTutor();
   tickClock(); setInterval(tickClock, 1000);
   if('speechSynthesis' in window) setTimeout(initVoices, 700);
 }
