@@ -265,6 +265,7 @@
     border:1px solid #c3ddf5; background:var(--blue-bg); color:var(--blue); border-radius:99px;
     padding:5px 11px; font-family:inherit; font-size:12.5px; cursor:pointer; font-weight:700;
   }
+  .pyx{ font-family:Arial,"Segoe UI",sans-serif; font-weight:600; }
   .tdots span{ display:inline-block; width:7px; height:7px; margin:0 2px; border-radius:50%;
                background:var(--muted); animation:tdot 1s infinite; }
   .tdots span:nth-child(2){ animation-delay:.15s } .tdots span:nth-child(3){ animation-delay:.3s }
@@ -2163,15 +2164,21 @@ function aiCall(userText, opts){
 }
 
 /* ---------- تنسيق رد النموذج: تهريب أولًا ثم تزيين ---------- */
+const PY_TONED = 'āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ';
+const PY_RE = new RegExp('[A-Za-zü' + PY_TONED + ']*[' + PY_TONED + '][A-Za-zü' + PY_TONED + ']*', 'g');
+const CJK_RE = /([\u4e00-\u9fff][\u4e00-\u9fff\u3000-\u303f\uff01\uff1f\u3002\uff0c\u3001]*)/g;
 function chatFmt(t){
-  let h = esc(String(t == null ? '' : t)).replace(/\r?\n/g, '<br>');
-  h = h.replace(/([一-鿿][一-鿿　-〿！？。，、]*)/g, function(m){
-    return '<span class="hz">' + m + '</span><button class="cact spk" data-a="speak" data-v="' + esc(m) + '">🔊</button>';
-  });
-  h = h.replace(/[A-Za-zü]*[āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜ][A-Za-zü]*/g, function(m){
-    return '<span class="py t' + tone(m) + '">' + m + '</span>';
-  });
-  return h;
+  const lines = String(t == null ? '' : t).split(/\r?\n/);
+  return lines.map(function(ln){
+    let h = esc(ln);
+    h = h.replace(CJK_RE, function(m){
+      return '<span class="hz">' + m + '</span><button class="cact spk" data-a="speak" data-v="' + esc(m) + '">\ud83d\udd0a</button>';
+    });
+    // تلوين بلا عزل: تبقى خوارزمية الاتجاه هي من ترتّب الكلمات
+    h = h.replace(PY_RE, function(m){ return '<span class="pyx t' + tone(m) + '">' + m + '</span>'; });
+    // سطر بلا حروف عربية = لاتيني/صيني خالص، يُثبَّت اتجاهه
+    return /[\u0600-\u06FF]/.test(ln) ? h : '<span class="pyline">' + h + '</span>';
+  }).join('<br>');
 }
 
 const AI_ERRS = {
