@@ -2045,6 +2045,7 @@ const AI_PROVIDERS = {
         const last = contents[contents.length - 1];
         imgs.forEach(function(im){ last.parts.unshift({ inline_data: { mime_type: im.mime, data: im.b64 } }); });
       }
+      while(contents.length && contents[0].role === 'model') contents.shift();
       const gc = { temperature: opts.temp == null ? 0.4 : opts.temp, maxOutputTokens: opts.max || 700 };
       if(opts.schema){ gc.responseMimeType = 'application/json'; gc.responseSchema = opts.schema; }
       const req = { systemInstruction: sys ? { parts: [{ text: sys }] } : undefined, contents: contents, generationConfig: gc };
@@ -2061,10 +2062,15 @@ const AI_PROVIDERS = {
       return ((c.content && c.content.parts) || []).map(function(p){ return p.text || ''; }).join('').trim();
     },
     fail: function(st, body){
-      if(st === 429) return AIErr('quota');
-      if(st === 403 || (st === 400 && /API[_ ]?key|API_KEY_INVALID/i.test(body))) return AIErr('badkey');
-      if(st === 404) return AIErr('model');
-      return AIErr('http', 'HTTP ' + st);
+      var msg = '';
+      try{ var j = JSON.parse(body); msg = (j.error && j.error.message) || ''; }catch(e){ msg = String(body || '').slice(0, 140); }
+      var e2;
+      if(st === 429) e2 = AIErr('quota');
+      else if(st === 403 || (st === 400 && /API[_ ]?key|API_KEY_INVALID/i.test(body))) e2 = AIErr('badkey');
+      else if(st === 404) e2 = AIErr('model');
+      else e2 = AIErr('http');
+      e2.detail = 'HTTP ' + st + (msg ? ' — ' + String(msg).slice(0, 180) : '');
+      return e2;
     }
   },
   mock: {
@@ -2099,8 +2105,16 @@ function aiTurns(limit){
   const out = [], msgs = (state.chat || []).slice(-(limit || 8));
   msgs.forEach(function(m){
     const txt = String(m.h || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-    if(txt) out.push({ role: m.r === 'u' ? 'u' : 'a', text: txt.slice(0, 500) });
+    if(!txt) return;
+    const role = m.r === 'u' ? 'u' : 'a';
+    if(out.length && out[out.length - 1].role === role){
+      out[out.length - 1].text = (out[out.length - 1].text + ' ' + txt).slice(0, 700);
+      return;
+    }
+    out.push({ role: role, text: txt.slice(0, 500) });
   });
+  // جوجل ترفض محادثة تبدأ برد النموذج
+  while(out.length && out[0].role === 'a') out.shift();
   return out;
 }
 
@@ -2223,7 +2237,8 @@ function tutorAsk(q){
     }).catch(function(e){
       typingOff();
       const m = AI_ERRS[e && e.code] || AI_ERRS.http;
-      chatAdd('a', '<p>' + esc(m) + '</p>' + off
+      chatAdd('a', '<p>' + esc(m) + '</p>'
+        + ((e && e.detail) ? '<div class="tles" dir="ltr">' + esc(e.detail) + '</div>' : '') + off
         + ((e && (e.code === 'badkey' || e.code === 'model' || e.code === 'nokey'))
             ? '<div class="trow">' + actBtn('⚙ افتح الإعدادات', 'ai', '') + '</div>' : ''));
     });
@@ -2372,12 +2387,32 @@ function srcHtml(srcs){
 }
 
 /* ---------- نداء ذكي: بحث ويب ثم تراجع تلقائي ---------- */
+const AI_FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'];
+function aiTryModels(text, opts, list){
+  if(!list.length) return Promise.reject(AIErr('model'));
+  const m = list[0];
+  return aiCall(text, Object.assign({}, opts, { model: m, web: false })).then(function(r){
+    state.set.aiModel = m; save();
+    return r;
+  }).catch(function(e){
+    if(e && (e.code === 'model' || e.code === 'http')) return aiTryModels(text, opts, list.slice(1));
+    throw e;
+  });
+}
 function aiAsk(text, opts){
   opts = opts || {};
   const withWeb = Object.assign({}, opts, { web: opts.web === false ? false : true });
   return aiCall(text, withWeb).catch(function(e){
     if(withWeb.web && e && (e.code === 'http' || e.code === 'model' || e.code === 'parse')){
-      return aiCall(text, Object.assign({}, opts, { web: false }));
+      return aiCall(text, Object.assign({}, opts, { web: false })).catch(function(e2){
+        if(e2 && (e2.code === 'model' || e2.code === 'http')){
+          return aiTryModels(text, opts, AI_FALLBACK_MODELS.filter(function(m){ return m !== aiModel(); }));
+        }
+        throw e2;
+      });
+    }
+    if(e && e.code === 'model'){
+      return aiTryModels(text, opts, AI_FALLBACK_MODELS.filter(function(m){ return m !== aiModel(); }));
     }
     throw e;
   });
