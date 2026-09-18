@@ -55,6 +55,14 @@
     background:rgba(255,255,255,.16); border:0; color:#fff; min-width:36px; height:33px;
     border-radius:9px; font-size:15px; cursor:pointer; font-family:inherit; padding:0 9px;
   }
+  .clock{
+    background:rgba(255,255,255,.17); border-radius:9px; padding:2px 8px;
+    text-align:center; line-height:1.2; min-width:58px; flex:0 0 auto;
+  }
+  .clock b{ display:block; font-size:13.5px; font-weight:700; letter-spacing:.3px; white-space:nowrap; }
+  .clock span{ display:block; font-size:8.5px; opacity:.85; white-space:nowrap; }
+  @media (max-width:430px){ .btxt{ display:none; } }
+
   .bar{ height:7px; background:rgba(255,255,255,.22); border-radius:99px; margin-top:8px; overflow:hidden; }
   .bar > i{ display:block; height:100%; width:0%; background:#8fe3c3; border-radius:99px; transition:width .45s; }
   .barlbl{ font-size:11.5px; opacity:.92; margin-top:3px; display:flex; justify-content:space-between; }
@@ -248,7 +256,8 @@
         <span class="sub" id="hSub">—</span>
       </h1>
     </div>
-    <button class="iconbtn" id="btnLessons" title="الدروس">📘 الدروس</button>
+    <div class="clock" id="clock" title="توقيت مكة المكرمة"></div>
+    <button class="iconbtn" id="btnLessons" title="الدروس">📘<span class="btxt"> الدروس</span></button>
     <button class="iconbtn" id="btnSet" title="إعدادات">⚙</button>
   </div>
   <div class="bar"><i id="barFill"></i></div>
@@ -1452,12 +1461,35 @@ function hideInstallHint(){
   state.set.hideInstall = 1; save();
   var c = document.getElementById('installCard'); if(c) c.style.display = 'none';
 }
+var lastClock = '';
+function meccaTime(){
+  var now = new Date();
+  try{
+    return new Intl.DateTimeFormat('ar-EG', {
+      timeZone:'Asia/Riyadh', hour:'2-digit', minute:'2-digit', hour12:true
+    }).format(now);
+  }catch(e){
+    var m = new Date(now.getTime() + (now.getTimezoneOffset() + 180) * 60000);
+    var h = m.getHours(), mi = m.getMinutes(), am = h < 12 ? 'ص' : 'م';
+    h = h % 12; if(h === 0) h = 12;
+    var ar = function(x){ return String(x).replace(/\d/g, function(d){ return '٠١٢٣٤٥٦٧٨٩'[+d]; }); };
+    return ar(h) + ':' + ar(mi < 10 ? '0' + mi : mi) + ' ' + am;
+  }
+}
+function tickClock(){
+  var el = document.getElementById('clock'); if(!el) return;
+  var s = meccaTime();
+  if(s === lastClock) return;
+  lastClock = s;
+  el.innerHTML = '<b>' + s + '</b><span>توقيت مكة</span>';
+}
 function paintAll(){ paintHome(); paintVocab(); }
 function boot(){
   loadPacks(); tagLessons();
   useLesson(state.cur || 'L1');
   initVoices(); markRate(); checkStorage();
   maybeInstallHint();
+  tickClock(); setInterval(tickClock, 1000);
   if('speechSynthesis' in window) setTimeout(initVoices, 700);
 }
 try{ boot(); }catch(e){ if(window.__fatal) window.__fatal('boot: ' + (e && e.message)); }
