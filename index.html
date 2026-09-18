@@ -2522,11 +2522,11 @@ function myWordAdd(q){
 
 /* ==========================================================================
    المرحلة ٣ — قراءة صور الدرس وتحويلها إلى درس داخل التطبيق
-   ضمان الجودة: مخطّط JSON صارم ← مراجعة ثانية على الصور ← معاينة قابلة للتعديل
+   دفعة حتى 20 صفحة · استخراج بمخطّط صارم ثم مراجعة على الصور ثم معاينة
    ========================================================================== */
-let pendImgs = [], pendPack = null, pendWarn = [];
+const P3_CHUNK = 3, P3_MAXIMG = 20, P3_MAXWORDS = 35;
+let pendImgs = [], pendPacks = [], pendWarn = [], p3Busy = false;
 
-/* ---------- تصغير الصور ---------- */
 function shrinkImg(file, max, q){
   return new Promise(function(res, rej){
     const url = URL.createObjectURL(file), img = new Image();
@@ -2539,15 +2539,15 @@ function shrinkImg(file, max, q){
         c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
         const d = c.toDataURL('image/jpeg', q || 0.72);
         URL.revokeObjectURL(url);
-        res({ mime: 'image/jpeg', b64: d.slice(d.indexOf(',') + 1), prev: d });
+        res({ mime: 'image/jpeg', b64: d.slice(d.indexOf(',') + 1) });
       }catch(e){ URL.revokeObjectURL(url); rej(e); }
     };
     img.onerror = function(){ URL.revokeObjectURL(url); rej(new Error('img')); };
     img.src = url;
   });
 }
+function p3Wait(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
 
-/* ---------- المخطّط الصارم ---------- */
 const LESSON_SCHEMA = {
   type: 'object',
   required: ['title', 'groups', 'sents', 'words'],
@@ -2562,49 +2562,71 @@ const LESSON_SCHEMA = {
       ar: { type: 'string' }, q: { type: 'boolean' } } } },
     words: { type: 'array', items: { type: 'object', required: ['hz', 'syl', 'm', 'tr', 'g', 'ex'], properties: {
       hz: { type: 'string' }, syl: { type: 'array', items: { type: 'string' } },
-      m: { type: 'string' }, tr: { type: 'string' }, g: { type: 'integer' }, ex: { type: 'string' } } } }
+      m: { type: 'string' }, tr: { type: 'string' }, g: { type: 'integer' }, ex: { type: 'string' } } } },
+    patterns: { type: 'array', items: { type: 'object', required: ['name', 'f', 's', 'why'], properties: {
+      name: { type: 'string' }, f: { type: 'string' }, s: { type: 'string' },
+      why: { type: 'string' }, bad: { type: 'string' }, drill: { type: 'string' } } } },
+    dialogue: { type: 'array', items: { type: 'object', required: ['who', 'a', 's'], properties: {
+      who: { type: 'string' }, a: { type: 'integer' }, s: { type: 'array', items: { type: 'string' } } } } }
   }
 };
 
 const EXTRACT_SYS = [
   'أنت مساعد يستخرج درس لغة صينية من صور صفحات كتاب أو سبورة، لطالب عربي مبتدئ.',
   'قواعد صارمة:',
-  '- استخرج ما في الصور فقط. لا تخترع كلمة غير موجودة.',
+  '- استخرج ما في الصور فقط. لا تخترع كلمة غير موجودة فيها.',
   '- الحروف الصينية مبسّطة فقط.',
-  '- syl = مصفوفة نطق كل حرف على حدة بعلامات النغمة، وطولها يساوي عدد حروف hz بالضبط.',
+  '- syl = مصفوفة نطق كل حرف على حدة بعلامات النغمة، طولها = عدد حروف hz بالضبط.',
   '- m = المعنى بالعربية بكلمتين أو ثلاث.',
-  '- tr = حيلة حفظ عربية قصيرة تفكّك الحرف وتربطه بمعناه. مثال للأسلوب:',
-  '  «高 عالٍ + 兴 مزاج ⟶ مزاجه عالٍ = سعيد».',
-  '- g = رقم المجموعة من قائمة groups.',
-  '- ex = مفتاح جملة موجودة في sents تستخدم هذه الكلمة، وإلا فأنشئ جملة قصيرة لها.',
-  '- كل جملة في sents تُقسَّم إلى وحدات t: كل وحدة hz و py و ar (معنى الوحدة بكلمة واحدة).',
-  '- مفاتيح k حروف إنجليزية صغيرة وأرقام وشرطة سفلية فقط.',
-  '- ar في الجملة = الترجمة العربية الكاملة.',
-  '- إن كانت الصورة تحتوي حوارًا، اجعل جمله ضمن sents.',
-  '- العنوان title بالعربية يصف موضوع الدرس.'
+  '- tr = حيلة حفظ عربية قصيرة تفكّك الحرف وتربطه بمعناه، مثل: «高 عالٍ + 兴 مزاج ⟶ مزاجه عالٍ = سعيد».',
+  '- g = رقم المجموعة من groups (اجمع الكلمات في مجموعات موضوعية).',
+  '- ex = مفتاح جملة من sents تستخدم الكلمة.',
+  '- كل جملة تُقسَّم إلى وحدات t: لكل وحدة hz و py و ar (معنى الوحدة بكلمة).',
+  '- مفاتيح k: حروف إنجليزية صغيرة وأرقام وشرطة سفلية فقط.',
+  '- patterns = قوالب القواعد الظاهرة في الصفحة: name اسم القاعدة بالعربية، f القالب مثل «شخص + 是 + الهوية»،',
+  '  s مفتاح جملة تمثّلها، why شرح عربي مختصر لسبب الترتيب، bad الخطأ الشائع عند الناطقين بالعربية، drill مفتاح جملة للتمرين.',
+  '- dialogue = الحوار إن وُجد في الصفحة: who اسم المتحدّث، a رقم 1 أو 2، s مفاتيح جمله بالترتيب.',
+  '- title بالعربية يصف موضوع الصفحات.'
 ].join('\n');
 
 const VERIFY_SYS = [
-  'أنت مدقّق لغوي للصينية. أمامك صور صفحة درس واستخراج أوّلي منها بصيغة JSON.',
-  'راجع كل كلمة وكل جملة مقابل الصور وصحّح:',
-  '- الحروف الصينية التي قُرئت خطأً.',
-  '- البينيين وعلامات النغمة (هذا أكثر موضع للخطأ).',
-  '- المعاني العربية غير الدقيقة.',
-  '- تطابق طول syl مع عدد الحروف.',
-  '- أي كلمة غير موجودة في الصور: احذفها.',
-  'أعد النتيجة كاملة بنفس البنية، مصحّحة. لا تضف شرحًا خارج JSON.'
+  'أنت مدقّق لغوي للصينية. أمامك صور صفحة درس واستخراج أوّلي منها.',
+  'راجع مقابل الصور وصحّح: الحروف المقروءة خطأً، البينيين وعلامات النغمة (أكثر موضع خطأ)،',
+  'المعاني العربية، وتطابق طول syl مع عدد الحروف. واحذف أي كلمة غير موجودة في الصور.',
+  'أعد النتيجة كاملة بنفس البنية مصحّحة، بلا أي شرح خارج JSON.'
 ].join('\n');
 
-/* ---------- التحقق والإصلاح على الجهاز ---------- */
-function nextLessonId(){
-  for(let i = 3; i < 99; i++){ const id = 'L' + i; if(!LESSONS.some(function(l){ return l.id === id; })) return id; }
+function p3Chunk(imgs, tries){
+  return aiCall('اقرأ هذه الصور واستخرج الدرس كاملًا.', {
+    system: EXTRACT_SYS, images: imgs, schema: LESSON_SCHEMA,
+    model: 'gemini-2.5-flash', temp: 0.15, max: 6000, web: false, turns: [], timeout: 120000
+  }).then(function(r){
+    let raw; try{ raw = JSON.parse(r.text); }catch(e){ throw AIErr('parse'); }
+    return aiCall('راجع هذا الاستخراج مقابل الصور وصحّحه:\n' + JSON.stringify(raw).slice(0, 14000), {
+      system: VERIFY_SYS, images: imgs, schema: LESSON_SCHEMA,
+      model: 'gemini-2.5-flash', temp: 0.1, max: 6000, web: false, turns: [], timeout: 120000
+    }).then(function(r2){
+      try{ const v = JSON.parse(r2.text); return (v && v.words && v.words.length) ? v : raw; }catch(e){ return raw; }
+    }, function(){ return raw; });
+  }).catch(function(e){
+    if(e && e.code === 'quota' && (tries || 0) < 1){
+      return p3Wait(22000).then(function(){ return p3Chunk(imgs, (tries || 0) + 1); });
+    }
+    throw e;
+  });
+}
+
+/* ---------- التحقق والإصلاح ---------- */
+function nextLessonId(taken){
+  for(let i = 3; i < 99; i++){
+    const id = 'L' + i;
+    if(!LESSONS.some(function(l){ return l.id === id; }) && (taken || []).indexOf(id) < 0) return id;
+  }
   return 'L' + Date.now();
 }
-const CJK_ONLY = /^[一-鿿]+$/;
-
-function validatePack(raw){
+function validatePack(raw, taken){
   const warn = [];
-  const out = { id: nextLessonId(), title: String((raw && raw.title) || 'درس جديد').slice(0, 60),
+  const out = { id: nextLessonId(taken), title: String((raw && raw.title) || 'درس جديد').slice(0, 60),
     tag: 'من الصور', groups: {}, sents: {}, words: [], patterns: [], dialogue: [] };
 
   (raw && raw.groups || []).forEach(function(g){
@@ -2613,9 +2635,10 @@ function validatePack(raw){
   });
   if(!Object.keys(out.groups).length) out.groups[1] = 'مفردات الدرس';
 
-  const used = {};
+  const kmap = {}, used = {};
   (raw && raw.sents || []).forEach(function(s, i){
-    let k = String((s && s.k) || '').toLowerCase().replace(/[^a-z0-9_]/g, '');
+    const orig = String((s && s.k) || '');
+    let k = orig.toLowerCase().replace(/[^a-z0-9_]/g, '');
     if(!/^[a-z][a-z0-9_]{1,23}$/.test(k) || used[k]) k = 's' + i;
     const toks = [];
     (s && s.t || []).forEach(function(t){
@@ -2624,19 +2647,19 @@ function validatePack(raw){
       toks.push([hz, String((t && t.py) || '').slice(0, 30), esc(String((t && t.ar) || '').slice(0, 30))]);
     });
     if(!toks.length || !s.ar){ warn.push('جملة ناقصة حُذفت'); return; }
-    used[k] = 1;
-    out.sents[k] = { t: toks, ar: esc(String(s.ar).slice(0, 120)), q: !!s.q };
+    used[k] = 1; kmap[orig] = k;
+    out.sents[k] = { t: toks, ar: esc(String(s.ar).slice(0, 140)), q: !!s.q };
   });
 
   (raw && raw.words || []).forEach(function(w){
     const hz = String((w && w.hz) || '').replace(/[^一-鿿]/g, '');
     const m = String((w && w.m) || '').trim();
-    if(!hz || hz.length > 6 || !CJK_ONLY.test(hz) || !m){ warn.push('كلمة ناقصة حُذفت'); return; }
+    if(!hz || hz.length > 6 || !m){ warn.push('كلمة ناقصة حُذفت'); return; }
     const chars = hz.split('');
     let syl = Array.isArray(w.syl) ? w.syl.map(function(x){ return String(x || '').slice(0, 12); }) : [];
     let dpy = null;
-    if(syl.length !== chars.length){ dpy = syl.join('') || ''; syl = chars.map(function(){ return ''; }); warn.push('نطق الحروف غير مطابق في ' + hz); }
-    let ex = String((w && w.ex) || '');
+    if(syl.length !== chars.length){ dpy = syl.join(' ') || ''; syl = chars.map(function(){ return ''; }); warn.push('نطق غير مطابق: ' + hz); }
+    let ex = kmap[String((w && w.ex) || '')] || '';
     if(!out.sents[ex]){
       ex = Object.keys(out.sents).filter(function(k){
         return out.sents[k].t.some(function(t){ return t[0].indexOf(hz) >= 0; });
@@ -2645,59 +2668,148 @@ function validatePack(raw){
     const g = (w && out.groups[w.g]) ? w.g : Object.keys(out.groups)[0];
     const word = { id: out.words.length + 1, g: parseInt(g, 10),
       ch: chars.map(function(c, i){ return [c, syl[i] || '']; }),
-      m: esc(m.slice(0, 60)), tr: esc(String((w && w.tr) || '').slice(0, 220)) };
+      m: esc(m.slice(0, 60)), tr: esc(String((w && w.tr) || '').slice(0, 240)) };
     if(dpy) word.dpy = dpy;
     if(ex) word.ex = ex;
     out.words.push(word);
   });
 
-  if(out.words.length < 2) return { err: 'لم أتمكّن من قراءة كلمات كافية من الصور. جرّب صورة أوضح أو أقرب.', warn: warn };
+  (raw && raw.patterns || []).forEach(function(p){
+    const s = kmap[String((p && p.s) || '')] || '';
+    if(!out.sents[s]) return;
+    let drill = kmap[String((p && p.drill) || '')] || '';
+    if(!out.sents[drill]) drill = s;
+    out.patterns.push({ id: 'p' + (out.patterns.length + 1),
+      name: esc(String(p.name || 'قاعدة').slice(0, 70)),
+      f: esc(String(p.f || '').slice(0, 90)), s: s, key: [],
+      why: esc(String(p.why || '').slice(0, 300)),
+      bad: esc(String(p.bad || '').slice(0, 300)), drill: drill });
+  });
+
+  (raw && raw.dialogue || []).forEach(function(d){
+    const keys = ((d && d.s) || []).map(function(k){ return kmap[String(k)]; }).filter(function(k){ return k && out.sents[k]; });
+    if(!keys.length) return;
+    out.dialogue.push({ who: esc(String((d && d.who) || 'أ').slice(0, 14)), a: (d && d.a === 2) ? 2 : 1, s: keys });
+  });
+  if(out.dialogue.length) out.dlgTitle = 'حوار الدرس';
+
+  if(out.words.length < 2) return { err: 'لم أقرأ كلمات كافية من هذه الصفحات.', warn: warn };
   return { lesson: out, warn: warn };
 }
 
-/* ---------- المسار الكامل ---------- */
+/* ---------- الدمج والتقسيم ---------- */
+function p3Merge(parts){
+  const packs = [], warn = [], taken = [];
+  let bucket = [], count = 0;
+  function flush(){
+    if(!bucket.length) return;
+    const merged = { title: bucket[0].title || 'درس من الصور', groups: [], sents: [], words: [], patterns: [], dialogue: [] };
+    const seen = {};
+    bucket.forEach(function(p, bi){
+      const gmap = {};
+      (p.groups || []).forEach(function(g){
+        const nn = merged.groups.length + 1;
+        gmap[g.n] = nn; merged.groups.push({ n: nn, name: g.name });
+      });
+      (p.sents || []).forEach(function(s){
+        merged.sents.push(Object.assign({}, s, { k: 'c' + bi + '_' + String(s.k || '').replace(/[^a-z0-9_]/gi, '') }));
+      });
+      (p.words || []).forEach(function(w){
+        const hz = String(w.hz || '').replace(/[^一-鿿]/g, '');
+        if(!hz || seen[hz]) return;
+        seen[hz] = 1;
+        merged.words.push(Object.assign({}, w, { g: gmap[w.g] || 1, ex: 'c' + bi + '_' + String(w.ex || '').replace(/[^a-z0-9_]/gi, '') }));
+      });
+      (p.patterns || []).forEach(function(x){
+        merged.patterns.push(Object.assign({}, x, {
+          s: 'c' + bi + '_' + String(x.s || '').replace(/[^a-z0-9_]/gi, ''),
+          drill: 'c' + bi + '_' + String(x.drill || '').replace(/[^a-z0-9_]/gi, '') }));
+      });
+      (p.dialogue || []).forEach(function(d){
+        merged.dialogue.push(Object.assign({}, d, {
+          s: (d.s || []).map(function(k){ return 'c' + bi + '_' + String(k || '').replace(/[^a-z0-9_]/gi, ''); }) }));
+      });
+    });
+    const v = validatePack(merged, taken);
+    if(v.lesson){
+      if(packs.length) v.lesson.title = v.lesson.title + ' — جزء ' + (packs.length + 1);
+      taken.push(v.lesson.id);
+      packs.push(v.lesson);
+    }
+    (v.warn || []).forEach(function(x){ if(warn.indexOf(x) < 0) warn.push(x); });
+    bucket = []; count = 0;
+  }
+  parts.forEach(function(p){
+    const n = (p.words || []).length;
+    if(count + n > P3_MAXWORDS && bucket.length) flush();
+    bucket.push(p); count += n;
+  });
+  flush();
+  return { packs: packs, warn: warn };
+}
+
+/* ---------- المسار ---------- */
 function photoPick(){
   const f = document.getElementById('chatFile');
   if(!f) return;
   if(!aiReady()){ chatAdd('a', '<p>قراءة الصور تحتاج المعلّم الذكي.</p><div class="trow">' + actBtn('⚙ فعّله', 'ai', '') + '</div>'); return; }
+  if(p3Busy){ toast('جارٍ العمل على الدفعة الحالية'); return; }
   f.value = ''; f.click();
 }
 function photoGo(input){
-  const files = Array.prototype.slice.call(input.files || []).slice(0, 3);
+  const files = Array.prototype.slice.call(input.files || []).slice(0, P3_MAXIMG);
   if(!files.length) return;
-  chatAdd('u', '📷 ' + files.length + ' صورة من الدرس');
-  typingOn();
+  p3Busy = true;
+  const sid = 'p3s' + Date.now();
+  chatAdd('u', '📷 ' + files.length + ' صفحة من الدرس');
+  chatAdd('a', '<p id="' + sid + '">جارٍ تجهيز الصور…</p><div class="lbar"><i id="' + sid + 'b" style="width:4%"></i></div>'
+    + '<p class="sml muted">اتركه يعمل — الصفحات تُقرأ ثلاثًا ثلاثًا ثم تُراجَع.</p>');
+  function setS(t, pct){
+    const e = document.getElementById(sid); if(e) e.textContent = t;
+    const b = document.getElementById(sid + 'b'); if(b) b.style.width = Math.max(4, Math.min(100, pct)) + '%';
+  }
+  const parts = [], fails = [];
   Promise.all(files.map(function(f){ return shrinkImg(f, 1100, 0.72); }))
     .then(function(imgs){
       pendImgs = imgs;
-      return aiCall('اقرأ هذه الصور واستخرج الدرس كاملًا.', {
-        system: EXTRACT_SYS, images: imgs, schema: LESSON_SCHEMA,
-        model: 'gemini-2.5-flash', temp: 0.15, max: 4096, web: false, turns: [], timeout: 90000
-      });
+      const chunks = [];
+      for(let i = 0; i < imgs.length; i += P3_CHUNK) chunks.push(imgs.slice(i, i + P3_CHUNK));
+      let i = 0;
+      function step(){
+        if(i >= chunks.length) return Promise.resolve();
+        const from = i * P3_CHUNK + 1, to = Math.min(files.length, (i + 1) * P3_CHUNK);
+        setS('قراءة الصفحات ' + from + '–' + to + ' من ' + files.length + '…', (i / chunks.length) * 100);
+        return p3Chunk(chunks[i]).then(function(r){
+          if(r && r.words && r.words.length) parts.push(r); else fails.push(from + '–' + to);
+        }, function(e){
+          fails.push(from + '–' + to + ' (' + ((e && e.code) || 'خطأ') + ')');
+        }).then(function(){ i++; return p3Wait(1500).then(step); });
+      }
+      return step();
     })
-    .then(function(r){
-      let raw;
-      try{ raw = JSON.parse(r.text); }catch(e){ throw AIErr('parse'); }
-      // مراجعة ثانية على نفس الصور لتصحيح البينيين والمعاني
-      return aiCall('راجع هذا الاستخراج مقابل الصور وصحّحه:\n' + JSON.stringify(raw).slice(0, 12000), {
-        system: VERIFY_SYS, images: pendImgs, schema: LESSON_SCHEMA,
-        model: 'gemini-2.5-flash', temp: 0.1, max: 4096, web: false, turns: [], timeout: 90000
-      }).then(function(r2){
-        try{ return JSON.parse(r2.text); }catch(e){ return raw; }
-      }, function(){ return raw; });
-    })
-    .then(function(raw){
-      typingOff();
-      const v = validatePack(raw);
-      if(v.err){ chatAdd('a', '<p>' + esc(v.err) + '</p>'); return; }
-      pendPack = v.lesson; pendWarn = v.warn;
-      chatAdd('a', '<p><b>قرأت الصور ✓</b> استخرجت ' + v.lesson.words.length + ' كلمة و'
-        + Object.keys(v.lesson.sents).length + ' جملة.</p>'
-        + '<div class="trow">' + actBtn('👁 راجع وعدّل قبل التركيب', 'prev', '', 'g') + '</div>');
+    .then(function(){
+      p3Busy = false;
+      if(!parts.length){
+        setS('تعذّرت قراءة الصفحات.', 100);
+        chatAdd('a', '<p>لم أستطع قراءة أي صفحة. جرّب صورًا أوضح، أو أعد المحاولة بعد دقيقة.</p>'
+          + (fails.length ? '<div class="tles">تعثّرت: ' + esc(fails.join(' · ')) + '</div>' : ''));
+        return;
+      }
+      setS('اكتملت القراءة ✓', 100);
+      const m = p3Merge(parts);
+      pendPacks = m.packs; pendWarn = m.warn;
+      const nw = pendPacks.reduce(function(a, l){ return a + l.words.length; }, 0);
+      const ns = pendPacks.reduce(function(a, l){ return a + Object.keys(l.sents).length; }, 0);
+      const np = pendPacks.reduce(function(a, l){ return a + l.patterns.length; }, 0);
+      chatAdd('a', '<p><b>انتهيت ✓</b> من ' + files.length + ' صفحة: <b>' + nw + '</b> كلمة، <b>' + ns + '</b> جملة، <b>'
+        + np + '</b> قاعدة، في <b>' + pendPacks.length + '</b> ' + (pendPacks.length === 1 ? 'درس' : 'دروس') + '.</p>'
+        + (fails.length ? '<div class="tles">تعذّرت الصفحات: ' + esc(fails.join(' · ')) + '</div>' : '')
+        + '<div class="trow">' + actBtn('👁 راجع وعدّل ثم ركّب', 'prev', '', 'g') + '</div>');
       openModal('mdPrev');
     })
     .catch(function(e){
-      typingOff();
+      p3Busy = false;
+      setS('توقف العمل.', 100);
       chatAdd('a', '<p>' + esc(AI_ERRS[e && e.code] || AI_ERRS.http) + '</p>'
         + ((e && e.detail) ? '<div class="tles" dir="ltr">' + esc(e.detail) + '</div>' : ''));
     });
@@ -2707,72 +2819,81 @@ function photoGo(input){
 function prevPaint(){
   const box = document.getElementById('prevBody');
   if(!box) return;
-  if(!pendPack){ box.innerHTML = '<div class="note">لا يوجد درس قيد المعاينة.</div>'; return; }
-  box.innerHTML =
-    '<p><b>عنوان الدرس</b></p>'
-    + '<input id="prevTitle" value="' + esc(pendPack.title) + '" style="width:100%;padding:9px;border:1px solid var(--line);border-radius:10px;font-family:inherit">'
-    + (pendWarn.length ? '<div class="note" style="margin-top:8px"><b>ملاحظات القراءة</b>' + esc(pendWarn.slice(0, 4).join(' · ')) + '</div>' : '')
-    + '<p style="margin-top:10px"><b>الكلمات (' + pendPack.words.length + ')</b> — عدّل ما تشاء، وأزل الصح عمّا لا تريده:</p>'
-    + pendPack.words.map(function(w, i){
-        return '<div class="tcard" style="padding:7px 9px">'
-          + '<label style="display:flex;gap:7px;align-items:center">'
-            + '<input type="checkbox" class="pvOn" data-i="' + i + '" checked>'
-            + '<span class="hz" style="font-size:24px">' + esc(w.ch.map(function(c){ return c[0]; }).join('')) + '</span>'
-            + '<button class="cact spk" data-a="speak" data-v="' + esc(w.ch.map(function(c){ return c[0]; }).join('')) + '">🔊</button>'
-          + '</label>'
-          + '<div class="row" style="margin-top:5px">'
-            + '<input class="pvPy" data-i="' + i + '" dir="ltr" value="' + esc(w.dpy || w.ch.map(function(c){ return c[1]; }).join(' ')) + '" placeholder="النطق"'
-              + ' style="flex:1;min-width:110px;padding:7px;border:1px solid var(--line);border-radius:9px;font-family:Arial">'
-            + '<input class="pvM" data-i="' + i + '" value="' + esc(w.m) + '" placeholder="المعنى"'
-              + ' style="flex:1;min-width:110px;padding:7px;border:1px solid var(--line);border-radius:9px;font-family:inherit">'
-          + '</div></div>';
+  if(!pendPacks.length){ box.innerHTML = '<div class="note">لا يوجد درس قيد المعاينة.</div>'; return; }
+  box.innerHTML = (pendWarn.length
+      ? '<div class="note"><b>ملاحظات القراءة</b>' + esc(pendWarn.slice(0, 5).join(' · ')) + '</div>' : '')
+    + pendPacks.map(function(L2, li){
+        return '<div style="margin-top:12px">'
+          + '<p><b>الدرس ' + (li + 1) + ' — العنوان</b></p>'
+          + '<input class="pvT" data-l="' + li + '" value="' + esc(L2.title) + '" style="width:100%;padding:9px;border:1px solid var(--line);border-radius:10px;font-family:inherit">'
+          + '<p class="sml muted" style="margin:4px 0">' + L2.words.length + ' كلمة · ' + Object.keys(L2.sents).length + ' جملة · '
+            + L2.patterns.length + ' قاعدة · ' + (L2.dialogue.length ? 'حوار ✓' : 'بلا حوار') + '</p>'
+          + L2.words.map(function(w, i){
+              const hz = w.ch.map(function(c){ return c[0]; }).join('');
+              return '<div class="tcard" style="padding:7px 9px">'
+                + '<label style="display:flex;gap:7px;align-items:center">'
+                  + '<input type="checkbox" class="pvOn" data-l="' + li + '" data-i="' + i + '" checked>'
+                  + '<span class="hz" style="font-size:23px">' + esc(hz) + '</span>'
+                  + '<button class="cact spk" data-a="speak" data-v="' + esc(hz) + '">🔊</button>'
+                + '</label>'
+                + '<div class="row" style="margin-top:5px">'
+                  + '<input class="pvPy" data-l="' + li + '" data-i="' + i + '" dir="ltr" value="'
+                    + esc(w.dpy || w.ch.map(function(c){ return c[1]; }).join(' ')) + '" placeholder="النطق"'
+                    + ' style="flex:1;min-width:105px;padding:7px;border:1px solid var(--line);border-radius:9px;font-family:Arial">'
+                  + '<input class="pvM" data-l="' + li + '" data-i="' + i + '" value="' + esc(w.m) + '" placeholder="المعنى"'
+                    + ' style="flex:1;min-width:105px;padding:7px;border:1px solid var(--line);border-radius:9px;font-family:inherit">'
+                + '</div></div>';
+            }).join('')
+          + '</div>';
       }).join('')
-    + '<div class="row eq" style="margin-top:10px">'
-      + '<button class="btn g" onclick="prevInstall()">✓ ركّب الدرس</button>'
-      + '<button class="btn o r" onclick="pendPack=null;closeModal(\'mdPrev\')">إلغاء</button>'
+    + '<div class="row eq" style="margin-top:12px">'
+      + '<button class="btn g" onclick="prevInstall()">✓ ركّب الدروس</button>'
+      + '<button class="btn o r" onclick="pendPacks=[];closeModal(\'mdPrev\')">إلغاء</button>'
     + '</div>';
 }
 function prevInstall(){
   try{
-    if(!pendPack) return;
-    const t = document.getElementById('prevTitle');
-    if(t && t.value.trim()) pendPack.title = esc(t.value.trim().slice(0, 60));
-    const keep = [];
-    Array.prototype.forEach.call(document.querySelectorAll('.pvOn'), function(cb){
-      const i = +cb.getAttribute('data-i');
-      if(!cb.checked) return;
-      const w = pendPack.words[i];
-      const py = (document.querySelector('.pvPy[data-i="' + i + '"]') || {}).value;
-      const m = (document.querySelector('.pvM[data-i="' + i + '"]') || {}).value;
-      if(m && m.trim()) w.m = esc(m.trim());
-      if(py && py.trim()){
-        const parts = py.trim().split(/\s+/);
-        if(parts.length === w.ch.length){ w.ch = w.ch.map(function(c, j){ return [c[0], parts[j]]; }); delete w.dpy; }
-        else w.dpy = py.trim();
-      }
-      w.id = keep.length + 1;
-      keep.push(w);
+    if(!pendPacks.length) return;
+    const titles = [];
+    let total = 0, chars = [];
+    Array.prototype.forEach.call(document.querySelectorAll('.pvT'), function(inp){
+      const li = +inp.getAttribute('data-l');
+      if(inp.value.trim()) pendPacks[li].title = esc(inp.value.trim().slice(0, 70));
     });
-    if(keep.length < 1){ toast('لم تختر أي كلمة'); return; }
-    pendPack.words = keep;
-    const box = document.getElementById('packBox');
-    if(box){ box.value = JSON.stringify({ lesson: pendPack }); installPack(); }
-    const chars = [];
-    keep.forEach(function(w){ w.ch.forEach(function(c){ if(chars.indexOf(c[0]) < 0) chars.push(c[0]); }); });
+    pendPacks.forEach(function(L2, li){
+      const keep = [];
+      L2.words.forEach(function(w, i){
+        const cb = document.querySelector('.pvOn[data-l="' + li + '"][data-i="' + i + '"]');
+        if(cb && !cb.checked) return;
+        const py = (document.querySelector('.pvPy[data-l="' + li + '"][data-i="' + i + '"]') || {}).value;
+        const m = (document.querySelector('.pvM[data-l="' + li + '"][data-i="' + i + '"]') || {}).value;
+        if(m && m.trim()) w.m = esc(m.trim());
+        if(py && py.trim()){
+          const parts = py.trim().split(/\s+/);
+          if(parts.length === w.ch.length){ w.ch = w.ch.map(function(c, j){ return [c[0], parts[j]]; }); delete w.dpy; }
+          else w.dpy = py.trim();
+        }
+        w.id = keep.length + 1;
+        keep.push(w);
+        w.ch.forEach(function(c){ if(chars.indexOf(c[0]) < 0) chars.push(c[0]); });
+      });
+      if(keep.length < 1) return;
+      L2.words = keep; total += keep.length; titles.push(L2.title);
+      const box = document.getElementById('packBox');
+      if(box){ box.value = JSON.stringify({ lesson: L2 }); installPack(); }
+    });
     closeModal('mdPrev');
-    const title = pendPack.title, n = keep.length;
-    pendPack = null; pendImgs = [];
-    AIDX = null;
-    chatAdd('a', '<p><b>تم تركيب «' + esc(title) + '» ✓</b> ' + n + ' كلمة دخلت المفردات والاختبارات والتكرار المتباعد.</p>'
+    pendPacks = []; pendImgs = []; AIDX = null;
+    if(!total){ toast('لم تختر أي كلمة'); return; }
+    chatAdd('a', '<p><b>تم التركيب ✓</b> ' + titles.length + ' ' + (titles.length === 1 ? 'درس' : 'دروس') + ' و' + total + ' كلمة:</p>'
+      + '<p class="sml">' + esc(titles.join(' · ')) + '</p>'
       + '<p class="sml muted" id="strk2">جارٍ تنزيل خطوات رسم الحروف…</p>'
-      + '<div class="trow">' + actBtn('📚 افتح المفردات', 'go', 'vocab') + actBtn('🎯 اختبرني عليه', 'quiz', '10') + '</div>');
+      + '<div class="trow">' + actBtn('📚 افتح المفردات', 'go', 'vocab') + actBtn('🎯 اختبرني', 'quiz', '12') + '</div>');
     ensureStrokes(chars).then(function(k){
       const el2 = document.getElementById('strk2');
       if(el2) el2.textContent = k ? ('✓ جاهزة: خطوات رسم ' + k + ' حرفًا.') : 'خطوات الرسم غير متاحة لبعض الحروف (بقية المزايا تعمل).';
     });
-  }catch(e){
-    toast('تعذّر التركيب');
-  }
+  }catch(e){ toast('تعذّر التركيب'); }
 }
 
 function paintAll(){ paintHome(); paintVocab(); }
