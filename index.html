@@ -30,6 +30,14 @@
     background:var(--bg); color:var(--ink); font-size:16px; line-height:1.8;
     padding-bottom:76px; overscroll-behavior-y:contain;
   }
+  /* إحساس التطبيق المثبّت */
+  html,body{ overscroll-behavior:none; }
+  body{ -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; }
+  input,textarea,select{ -webkit-user-select:text; user-select:text; }
+  header{ padding-top:calc(9px + env(safe-area-inset-top)); }
+  nav{ padding-bottom:calc(7px + env(safe-area-inset-bottom)); }
+  body{ padding-bottom:calc(76px + env(safe-area-inset-bottom)); }
+
   .hz{ font-family:"Microsoft YaHei","PingFang SC","Noto Sans SC",SimSun,sans-serif;
        direction:ltr; unicode-bidi:isolate; display:inline-block; font-weight:600; }
   .py{ font-family:Arial,"Segoe UI",sans-serif; direction:ltr; unicode-bidi:isolate; display:inline-block; }
@@ -251,6 +259,7 @@
 
 <!-- ============ الرئيسية ============ -->
 <section class="page on" id="pg-home">
+  <div class="card" id="installCard" style="display:none"></div>
   <div class="stats" style="margin-bottom:10px">
     <div class="stat streak"><u id="stStreak">0</u><span>🔥 أيام متتابعة</span></div>
     <div class="stat g"><u id="stKnown">0</u><span>كلمة محفوظة</span></div>
@@ -1427,11 +1436,28 @@ function selfTest(){
     + 'الدروس: ' + LESSONS.length + ' · كلمات الدرس الحالي: ' + (W ? W.length : 0) + '<br>'
     + '<span style="direction:ltr;display:inline-block;font-size:10.5px;opacity:.75;word-break:break-all">' + navigator.userAgent + '</span></div>';
 }
+function maybeInstallHint(){
+  var c = document.getElementById('installCard'); if(!c) return;
+  var standalone = (window.navigator.standalone === true) ||
+    (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  if(standalone || !/^https?:/.test(location.protocol) || state.set.hideInstall) return;
+  var ios = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  c.style.display = 'block';
+  c.innerHTML = '<div class="note b"><b>ثبّته كتطبيق على شاشتك</b>' + (ios
+    ? 'اضغط زر المشاركة <b>⬆</b> في شريط Safari بالأسفل، ثم <b>إضافة إلى الشاشة الرئيسية</b>، ثم <b>إضافة</b>. تظهر أيقونة 汉 ويفتح بملء الشاشة ويعمل بدون إنترنت.'
+    : 'من قائمة المتصفح اختر <b>تثبيت التطبيق</b> أو <b>إضافة إلى الشاشة الرئيسية</b>.')
+    + '<button class="btn o sm" style="margin-top:8px" onclick="hideInstallHint()">فهمت، أخفِ هذا</button></div>';
+}
+function hideInstallHint(){
+  state.set.hideInstall = 1; save();
+  var c = document.getElementById('installCard'); if(c) c.style.display = 'none';
+}
 function paintAll(){ paintHome(); paintVocab(); }
 function boot(){
   loadPacks(); tagLessons();
   useLesson(state.cur || 'L1');
   initVoices(); markRate(); checkStorage();
+  maybeInstallHint();
   if('speechSynthesis' in window) setTimeout(initVoices, 700);
 }
 try{ boot(); }catch(e){ if(window.__fatal) window.__fatal('boot: ' + (e && e.message)); }
