@@ -59,7 +59,7 @@
     background:rgba(255,255,255,.17); border-radius:9px; padding:2px 8px;
     text-align:center; line-height:1.2; min-width:58px; flex:0 0 auto;
   }
-  .clock b{ display:block; font-size:13.5px; font-weight:700; letter-spacing:.3px; white-space:nowrap; }
+  .clock b{ display:block; font-size:13.5px; font-weight:700; letter-spacing:.3px; white-space:nowrap; direction:ltr; }
   .clock span{ display:block; font-size:8.5px; opacity:.85; white-space:nowrap; }
   @media (max-width:430px){ .btxt{ display:none; } }
 
@@ -1465,15 +1465,14 @@ var lastClock = '';
 function meccaTime(){
   var now = new Date();
   try{
-    return new Intl.DateTimeFormat('ar-EG', {
-      timeZone:'Asia/Riyadh', hour:'2-digit', minute:'2-digit', hour12:true
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone:'Asia/Riyadh', hour:'numeric', minute:'2-digit', hour12:true
     }).format(now);
   }catch(e){
     var m = new Date(now.getTime() + (now.getTimezoneOffset() + 180) * 60000);
-    var h = m.getHours(), mi = m.getMinutes(), am = h < 12 ? 'ص' : 'م';
+    var h = m.getHours(), mi = m.getMinutes(), am = h < 12 ? 'AM' : 'PM';
     h = h % 12; if(h === 0) h = 12;
-    var ar = function(x){ return String(x).replace(/\d/g, function(d){ return '٠١٢٣٤٥٦٧٨٩'[+d]; }); };
-    return ar(h) + ':' + ar(mi < 10 ? '0' + mi : mi) + ' ' + am;
+    return h + ':' + (mi < 10 ? '0' + mi : mi) + ' ' + am;
   }
 }
 function tickClock(){
