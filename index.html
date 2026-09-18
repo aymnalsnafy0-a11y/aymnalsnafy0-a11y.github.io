@@ -1694,11 +1694,13 @@ function findWordsT(q, limit){
       else if(pyq.length >= 3 && e.pyf.indexOf(pyq) > 0) sc = Math.max(sc, 60);
       else if(e.syl.indexOf(pyq) >= 0) sc = Math.max(sc, 66);
     }
+    var hit = 0;
     toks.forEach(function(t){
-      if(e.ar === t) sc = Math.max(sc, 95);
-      else if(e.arT.indexOf(t) >= 0) sc = Math.max(sc, 86);
-      else if(t.length >= 3 && e.ar.indexOf(t) >= 0) sc = Math.max(sc, 64);
+      if(e.ar === t){ sc = Math.max(sc, 95); hit++; }
+      else if(e.arT.indexOf(t) >= 0){ sc = Math.max(sc, 78); hit++; }
+      else if(t.length >= 3 && e.ar.indexOf(t) >= 0){ sc = Math.max(sc, 62); hit++; }
     });
+    if(hit >= 2) sc = Math.max(sc, 90);
     if(sc) out.push({ e: e, sc: sc });
   });
   out.sort(function(a, b){ return b.sc - a.sc; });
@@ -1707,9 +1709,10 @@ function findWordsT(q, limit){
 function findSentsT(q, limit){
   const hzq = onlyHz(q), toks = arTokens(q), out = [];
   idx().sents.forEach(function(e){
-    let sc = 0;
-    if(hzq && e.hz.indexOf(hzq) >= 0) sc = 80;
-    toks.forEach(function(t){ if(t.length >= 3 && e.ar.indexOf(t) >= 0) sc = Math.max(sc, 70); });
+    let sc = 0, hit = 0;
+    if(hzq && e.hz.indexOf(hzq) >= 0) sc = 82;
+    toks.forEach(function(t){ if(t.length >= 2 && e.ar.indexOf(t) >= 0) hit++; });
+    if(hit) sc = Math.max(sc, Math.min(92, 58 + 12 * hit));
     if(sc) out.push({ e: e, sc: sc });
   });
   out.sort(function(a, b){ return b.sc - a.sc; });
@@ -1784,6 +1787,7 @@ function tutorIntent(s){
   if(/اختبرني|اختبار|تمرين|دربني|درب ني|مرني|كويز/.test(s)) return 'drill';
   if(/اذاكر|المستحق|مراجعه اليوم|ابدا|خطه|اليوم/.test(s)) return 'plan';
   if(/الفرق|فرق بين|مقابل/.test(s)) return 'diff';
+  if(/كيف اقول|كيف نقول|كيف اكتب|كيف اسال|كيف اطلب|ترجم|بالصيني/.test(s)) return 'howsay';
   if(/اكتب|ارسم|خطوات|كتابه/.test(s)) return 'write';
   if(/قاعده|قواعد|تركيب|ترتيب|نحو|متي استخدم|ليش|لماذا/.test(s)) return 'grammar';
   if(/جمل|جمله|مثال|امثله/.test(s)) return 'sentences';
@@ -1885,6 +1889,13 @@ function tutorAnswer(raw){
       + '<div class="trow">' + actBtn('✍ افتح لوحة الكتابة', 'write', wkey(r[0].e.w), 'g') + '</div>';
   }
 
+  if(intent === 'howsay'){
+    const se = findSentsT(q, 3), w2 = findWordsT(q, 2);
+    if(se.length && se[0].sc >= 70) return tSentList(se, 'قل هكذا:');
+    if(w2.length && w2[0].sc >= 78) return tWordCard(w2[0].e);
+    if(se.length) return tSentList(se, 'أقرب ما عندي في دروسك:');
+  }
+
   if(intent === 'grammar'){
     const p = findPatsT(q);
     if(p.length) return tPatCard(p[0].e);
@@ -1897,6 +1908,8 @@ function tutorAnswer(raw){
 
   // بحث عام
   const wr = findWordsT(q, 4), pr = findPatsT(q), sr = findSentsT(q, 3);
+  const bestW = wr[0] ? wr[0].sc : 0, bestS = sr[0] ? sr[0].sc : 0;
+  if(bestS > bestW && bestS >= 70) return tSentList(sr, 'قل هكذا:');
   if(wr.length && wr[0].sc >= 60){
     let html = tWordCard(wr[0].e);
     if(wr.length > 1 && wr[1].sc >= 80){
