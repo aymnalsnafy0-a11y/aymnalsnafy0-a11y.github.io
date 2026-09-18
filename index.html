@@ -2207,6 +2207,7 @@ const AI_ERRS = {
   safety: 'رفض المزوّد الإجابة عن هذا السؤال. هذه إجابتي من دروسك:',
   abort:  'تأخّر الرد أكثر من اللازم. هذه إجابتي من دروسك:',
   parse:  'وصلني رد غير مفهوم. هذه إجابتي من دروسك:',
+  empty:  'قرأت الصورة لكن لم أجد فيها كلمات صينية واضحة. صوّر أقرب وأوضح، أو صوّر قائمة المفردات نفسها.',
   http:   'تعذّر الوصول للمعلّم الذكي. هذه إجابتي من دروسك:'
 };
 
@@ -2525,7 +2526,7 @@ function myWordAdd(q){
    دفعة حتى 20 صفحة · استخراج بمخطّط صارم ثم مراجعة على الصور ثم معاينة
    ========================================================================== */
 const P3_CHUNK = 3, P3_MAXIMG = 20, P3_MAXWORDS = 35;
-let pendImgs = [], pendPacks = [], pendWarn = [], p3Busy = false;
+let pendImgs = [], pendPacks = [], pendWarn = [], p3Busy = false, p3NoSchema = 0;
 
 function shrinkImg(file, max, q){
   return new Promise(function(res, rej){
@@ -2596,24 +2597,54 @@ const VERIFY_SYS = [
   'أعد النتيجة كاملة بنفس البنية مصحّحة، بلا أي شرح خارج JSON.'
 ].join('\n');
 
+const JSON_HINT = [
+  '',
+  'أعد النتيجة JSON صالحًا فقط، بلا أي نصّ خارجه وبلا أسوار كود، بهذه البنية:',
+  '{"title":"...","groups":[{"n":1,"name":"..."}],',
+  '"sents":[{"k":"s1","t":[{"hz":"我","py":"wǒ","ar":"أنا"}],"ar":"الترجمة","q":false}],',
+  '"words":[{"hz":"老师","syl":["lǎo","shī"],"m":"معلّم","tr":"حيلة الحفظ","g":1,"ex":"s1"}],',
+  '"patterns":[{"name":"...","f":"...","s":"s1","why":"...","bad":"...","drill":"s1"}],',
+  '"dialogue":[{"who":"أحمد","a":1,"s":["s1"]}]}'
+].join('\n');
+
+function p3Json(txt){
+  let s = String(txt == null ? '' : txt).trim();
+  s = s.replace(/^\uFEFF/, '').replace(/^```(?:json)?/i, '').replace(/```\s*$/, '').trim();
+  const i = s.indexOf('{'), j = s.lastIndexOf('}');
+  if(i >= 0 && j > i) s = s.slice(i, j + 1);
+  return JSON.parse(s);
+}
+function p3One(imgs, sys, text, useSchema){
+  const o = { system: useSchema ? sys : (sys + JSON_HINT), images: imgs,
+    model: 'gemini-2.5-flash', temp: 0.15, max: 6000, web: false, turns: [], timeout: 120000 };
+  if(useSchema) o.schema = LESSON_SCHEMA;
+  return aiCall(text, o);
+}
 function p3Chunk(imgs, tries){
-  return aiCall('اقرأ هذه الصور واستخرج الدرس كاملًا.', {
-    system: EXTRACT_SYS, images: imgs, schema: LESSON_SCHEMA,
-    model: 'gemini-2.5-flash', temp: 0.15, max: 6000, web: false, turns: [], timeout: 120000
-  }).then(function(r){
-    let raw; try{ raw = JSON.parse(r.text); }catch(e){ throw AIErr('parse'); }
-    return aiCall('راجع هذا الاستخراج مقابل الصور وصحّحه:\n' + JSON.stringify(raw).slice(0, 14000), {
-      system: VERIFY_SYS, images: imgs, schema: LESSON_SCHEMA,
-      model: 'gemini-2.5-flash', temp: 0.1, max: 6000, web: false, turns: [], timeout: 120000
-    }).then(function(r2){
-      try{ const v = JSON.parse(r2.text); return (v && v.words && v.words.length) ? v : raw; }catch(e){ return raw; }
-    }, function(){ return raw; });
-  }).catch(function(e){
-    if(e && e.code === 'quota' && (tries || 0) < 1){
-      return p3Wait(22000).then(function(){ return p3Chunk(imgs, (tries || 0) + 1); });
-    }
-    throw e;
-  });
+  const ask = 'اقرأ هذه الصور واستخرج الدرس كاملًا.';
+  return p3One(imgs, EXTRACT_SYS, ask, true)
+    .then(function(r){ return p3Json(r.text); })
+    .catch(function(e){
+      // بعض المفاتيح/النماذج ترفض المخطّط الصارم أو تعيد نصًّا غير نقيّ
+      if(e && (e.code === 'http' || e.code === 'parse' || e.code === 'model')){
+        p3NoSchema = 1;
+        return p3One(imgs, EXTRACT_SYS, ask, false).then(function(r2){ return p3Json(r2.text); });
+      }
+      throw e;
+    })
+    .then(function(raw){
+      if(!raw || !raw.words || !raw.words.length) throw AIErr('empty');
+      return p3One(imgs, VERIFY_SYS, 'راجع هذا الاستخراج مقابل الصور وصحّحه:\n' + JSON.stringify(raw).slice(0, 14000), !p3NoSchema)
+        .then(function(r2){
+          try{ const v = p3Json(r2.text); return (v && v.words && v.words.length) ? v : raw; }catch(e){ return raw; }
+        }, function(){ return raw; });
+    })
+    .catch(function(e){
+      if(e && e.code === 'quota' && (tries || 0) < 1){
+        return p3Wait(22000).then(function(){ return p3Chunk(imgs, (tries || 0) + 1); });
+      }
+      throw e;
+    });
 }
 
 /* ---------- التحقق والإصلاح ---------- */
