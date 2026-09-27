@@ -4,7 +4,7 @@
   const panel=document.createElement('aside');
   panel.id='tutorPanel';panel.className='tutor-panel';panel.hidden=true;panel.dir='rtl';
   panel.setAttribute('role','dialog');panel.setAttribute('aria-label','معلّم الصينية');
-  panel.innerHTML='<header class="tutor-head"><strong>老师 · معلّمك</strong><div><button type="button" id="tutorClear" title="مسح المحادثة">محادثة جديدة</button> <button type="button" id="tutorClose" aria-label="إغلاق المعلّم">✕</button></div></header><div class="tutor-context" id="tutorContext"></div><div class="tutor-actions"><button type="button" data-tutor-question="اشرح لي ما أذاكره الآن مع مثال والبينيين">اشرح الحالي</button><button type="button" data-tutor-question="اختبرني بسؤال واحد من درسي وانتظر إجابتي">اختبرني</button><button type="button" data-tutor-question="ساعدني أحفظ شكل الحرف الحالي بحيلة بصرية، وميّزها عن أصل الحرف">ساعدني أحفظ</button></div>';
+  panel.innerHTML='<header class="tutor-head" title="اسحب من هنا لتحريك النافذة"><strong>老师 · معلّمك</strong><div><button type="button" id="tutorClear" title="مسح المحادثة">محادثة جديدة</button> <button type="button" id="tutorFull" title="ملء الشاشة" aria-label="ملء الشاشة">⛶</button> <button type="button" id="tutorClose" aria-label="إغلاق المعلّم">✕</button></div></header><div class="tutor-context" id="tutorContext"></div><div class="tutor-actions"><button type="button" data-tutor-question="اشرح لي ما أذاكره الآن مع مثال والبينيين">اشرح الحالي</button><button type="button" data-tutor-question="اختبرني بسؤال واحد من درسي وانتظر إجابتي">اختبرني</button><button type="button" data-tutor-question="ساعدني أحفظ شكل الحرف الحالي بحيلة بصرية، وميّزها عن أصل الحرف">ساعدني أحفظ</button></div>';
   document.body.appendChild(panel);
   const log=document.getElementById('chatLog'),bar=document.getElementById('chatBar');
   panel.append(log,bar);log.setAttribute('aria-live','polite');log.setAttribute('aria-relevant','additions');
@@ -73,21 +73,70 @@
   function fitPanelViewport(){fitChatBar();}
   paintChat=function(){const msgs=state.chat||[];log.innerHTML=msgs.length?msgs.map(m=>'<div class="msg '+(m.r==='u'?'me':'ai')+'"><div class="bubble">'+m.h+'</div></div>').join(''):'<div class="msg ai"><div class="bubble">你好 (nǐ hǎo) — مرحبًا! أنا معلّمك. اسألني عن الدرس أو اضغط «اشرح الحالي».<br><small>تحتاج الإجابات الذكية اتصالًا بالإنترنت.</small></div></div>';scroll();};
   typingOn=function(){typingOff();const d=document.createElement('div');d.id='tTyping';d.className='msg ai';d.textContent='المعلّم يكتب…';log.appendChild(d);scroll();};
-  fitChatBar=function(){if(!window.visualViewport)return;const vv=window.visualViewport;const gap=Math.max(0,window.innerHeight-vv.height-vv.offsetTop);panel.style.bottom=gap>100?(gap+8)+'px':'';panel.style.maxHeight=Math.max(140,vv.height-(gap>100?20:165))+'px';};
+  fitChatBar=function(){
+    if(!window.visualViewport)return;const vv=window.visualViewport;
+    if(panel.classList.contains('is-full')){panel.style.maxHeight=vv.height+'px';panel.style.height=vv.height+'px';panel.style.top=vv.offsetTop+'px';return;}
+    if(panel.classList.contains('is-moved')){const top=panel.getBoundingClientRect().top;panel.style.maxHeight=Math.max(160,vv.height+vv.offsetTop-top-8)+'px';return;}
+    const gap=Math.max(0,window.innerHeight-vv.height-vv.offsetTop);panel.style.bottom=gap>100?(gap+8)+'px':'';panel.style.maxHeight=Math.max(140,vv.height-(gap>100?20:165))+'px';};
+  /* نافذة المعلّم: ملء الشاشة، والسحب من الشريط العلوي، ويُحفظ المكان والحجم */
+  const head=panel.querySelector('.tutor-head'),fullBtn=document.getElementById('tutorFull');
+  function panelSave(){
+    const full=panel.classList.contains('is-full');
+    if(full){state.set.tutorWin=Object.assign({},state.set.tutorWin||{},{full:true});save();return;}
+    const b=panel.getBoundingClientRect();state.set.tutorWin={full:false,moved:panel.classList.contains('is-moved'),x:b.left,y:b.top,w:b.width,h:b.height};save();}
+  function placePanel(x,y){
+    const b=panel.getBoundingClientRect();
+    x=Math.max(4,Math.min(window.innerWidth-Math.min(b.width,window.innerWidth)-4,x));
+    y=Math.max(4,Math.min(window.innerHeight-60,y));
+    panel.classList.add('is-moved');panel.style.insetInlineStart='auto';panel.style.right='auto';panel.style.bottom='auto';panel.style.left=x+'px';panel.style.top=y+'px';
+    panel.style.maxHeight=Math.max(160,window.innerHeight-y-8)+'px';
+  }
+  function setFull(on,persist){
+    panel.classList.toggle('is-full',on);fullBtn.textContent=on?'🗗':'⛶';fullBtn.title=on?'تصغير النافذة':'ملء الشاشة';fullBtn.setAttribute('aria-label',fullBtn.title);
+    if(on){panel.style.maxHeight='';panel.style.height='';}else{panel.style.top='';panel.style.height='';restorePanel(false);}
+    fitChatBar();scroll();if(persist)panelSave();
+  }
+  function restorePanel(withFull){
+    const t=state.set.tutorWin;if(!t)return;
+    if(withFull&&t.full){setFull(true,false);return;}
+    if(t.w&&t.h&&window.innerWidth>600){panel.style.width=Math.min(t.w,window.innerWidth-8)+'px';panel.style.height=Math.min(t.h,window.innerHeight-8)+'px';}
+    if(t.moved)placePanel(t.x,t.y);
+  }
+  fullBtn.onclick=()=>setFull(!panel.classList.contains('is-full'),true);
+  head.addEventListener('dblclick',e=>{if(!e.target.closest('button'))setFull(!panel.classList.contains('is-full'),true);});
+  let pdrag=null;
+  head.addEventListener('pointerdown',e=>{
+    if(e.button!==0||!e.isPrimary||e.target.closest('button')||panel.classList.contains('is-full'))return;
+    const b=panel.getBoundingClientRect();pdrag={id:e.pointerId,x:e.clientX,y:e.clientY,left:b.left,top:b.top,moved:false};head.setPointerCapture(e.pointerId);
+  });
+  head.addEventListener('pointermove',e=>{
+    if(!pdrag||pdrag.id!==e.pointerId)return;const dx=e.clientX-pdrag.x,dy=e.clientY-pdrag.y;
+    if(!pdrag.moved&&Math.hypot(dx,dy)<6)return;pdrag.moved=true;e.preventDefault();panel.classList.add('is-dragging');placePanel(pdrag.left+dx,pdrag.top+dy);
+  });
+  function endPanelDrag(e){if(!pdrag||pdrag.id!==e.pointerId)return;if(pdrag.moved)panelSave();pdrag=null;panel.classList.remove('is-dragging');if(head.hasPointerCapture(e.pointerId))head.releasePointerCapture(e.pointerId);}
+  head.addEventListener('pointerup',endPanelDrag);head.addEventListener('pointercancel',endPanelDrag);
+  if(window.ResizeObserver){let rt=0;new ResizeObserver(()=>{if(panel.hidden||panel.classList.contains('is-full'))return;clearTimeout(rt);rt=setTimeout(panelSave,400);}).observe(panel);}
+  window.addEventListener('resize',()=>{if(!panel.hidden&&panel.classList.contains('is-moved')&&!panel.classList.contains('is-full')){const b=panel.getBoundingClientRect();placePanel(b.left,b.top);}});
+  restorePanel(true);
+  /* على chatgpt.site يوجد خادم /api/tutor بمفتاح مشترك. في أي موقع آخر (مثل GitHub Pages)
+     لا يوجد خادم، فيتصل المعلّم بـ Gemini مباشرة بمفتاح الطالب المجاني المحفوظ في جهازه. */
+  const SERVER=/(^|\.)chatgpt\.site$/.test(location.hostname);
+  const direct={call:aiCall,ready:aiReady,model:aiModel,paint:aiPaint,test:aiTest};
+  aiFoot=()=>'<div class="tles">🤖 معلّمك الذكي · Gemini</div>';
+  if(SERVER){
   aiReady=()=>state.set.aiOn!==0;
   aiModel=()=> 'gemini-3.8-flash';
   AI_ERRS.nokey='المعلّم غير مفعّل على الخادم بعد.';
   AI_ERRS.badkey='تعذّر اتصال المعلّم بحساب Google. يلزم تحديث مفتاح الخادم.';
   AI_ERRS.quota='وصلنا لحد الاستخدام المتاح حاليًا. جرّب لاحقًا؛ تقدر تواصل مذاكرة الدروس المحفوظة.';
   AI_ERRS.model='نموذج المعلّم غير متاح حاليًا. جرّب لاحقًا.';
-  aiFoot=()=>'<div class="tles">🤖 معلّمك الذكي · Gemini</div>';
   aiCall=async function(text,opts){
     opts=opts||{};
     if(navigator.onLine===false)throw AIErr('offline');
     if(aiQuotaLeft()<=0)throw AIErr('cap');
     const turns=(opts.turns||aiTurns(10)).slice();
     if(!opts.skipUser && !(turns.length&&turns[turns.length-1].role==='u'&&turns[turns.length-1].text===text))turns.push({role:'u',text});
-    const sys=opts.system==null?aiSystem().replace('- التزم بمفردات الدرس أدناه، ولا تُدخل كلمات أصعب إلا إذا سُئلت عنها.','- اشرح أي كلمة يسأل عنها الطالب حتى لو كانت خارج دروسه، واجعل الشرح مناسبًا للمبتدئ.')+context():opts.system;
+    const sys=opts.system==null?tutorSystem():opts.system;
     const body=AI_PROVIDERS.gemini.build(sys,turns,opts.images,Object.assign({},opts,{web:false}));
     const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),opts.timeout||65000);
     try{
@@ -96,6 +145,53 @@
       const j=await r.json();aiCount();return {text:AI_PROVIDERS.gemini.parse(j),srcs:[]};
     }catch(e){if(e.code)throw e;throw AIErr(e.name==='AbortError'?'abort':'offline');}finally{clearTimeout(timer);}
   };
+  }else{
+  aiReady=direct.ready;aiModel=direct.model;aiTest=direct.test;
+  AI_ERRS.nokey='المعلّم الذكي يحتاج مفتاح Gemini مجانيًا مرة واحدة فقط. اضغط «فعّل المعلّم الذكي» واتبع الخطوات (دقيقتان).';
+  aiCall=function(text,opts){
+    opts=Object.assign({},opts||{});
+    if(opts.system==null)opts.system=tutorSystem();
+    if(!opts.turns)opts.turns=aiTurns(20);
+    if(opts.turns.length&&opts.turns[opts.turns.length-1].role==='u'&&opts.turns[opts.turns.length-1].text===text)opts.skipUser=true;
+    return direct.call(text,opts);
+  };
+  aiPaint=function(){
+    const st=document.getElementById('aiState');
+    if(st&&!document.getElementById('aiKeyIn')){
+      st.insertAdjacentHTML('afterend','<div class="note b" id="aiKeyBox" style="margin-top:8px"><b>تفعيل المعلّم الذكي (مجاني)</b>'
+        +'١) افتح <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> وسجّل بحساب Google.<br>'
+        +'٢) اضغط <span class="ltr">Create API key</span> وانسخ المفتاح.<br>٣) الصقه هنا واضغط «حفظ»، ثم «جرّب الاتصال».'
+        +'<input id="aiKeyIn" type="password" dir="ltr" autocomplete="off" placeholder="AIza..." style="width:100%;margin-top:8px">'
+        +'<div class="row eq" style="margin-top:6px"><button class="btn" onclick="aiSaveKey()">حفظ</button><button class="btn o" onclick="aiClearKey()">حذف المفتاح</button></div>'
+        +'<label class="sml" style="display:block;margin-top:8px">النموذج (الأذكى: pro، والأسرع: flash)<select id="aiModelSel" onchange="aiPickModel()" dir="ltr" style="width:100%"></select></label>'
+        +'<p class="sml muted" style="margin:6px 0 0">المفتاح يبقى في هذا الجهاز فقط، ولا يدخل في «نسخ تقدّمي».</p></div>');
+    }
+    direct.paint();
+  };
+  }
+  function tutorSystem(){
+    const vocab=(W||[]).map(w=>wordHz(w)+' '+wordPy(w)+' = '+w.m).join('\n');
+    const pats=(PATTERNS||[]).map(p=>p.name+' ← '+p.f).join('\n');
+    const others=LESSONS.filter(l=>l!==L&&l.id!=='LX').map(l=>l.title+': '+l.words.map(wordHz).join(' ')).join('\n');
+    const weak=pickWords(6,false).map(wordHz).join('، ');
+    return [
+      'أنت «المعلّم»: مدرّس خبير وصبور للغة الصينية، تُدرّس طالبًا عربيًا في بداية المنهج (New HSK Course 1).',
+      'أسلوبك:',
+      '- أجب بالعربية الواضحة، وبلا تنسيق Markdown (لا * ولا #). استخدم أسطرًا قصيرة وترقيمًا عاديًا (١، ٢، ٣) عند الحاجة.',
+      '- كل كلمة أو جملة صينية: الحروف المبسّطة، ثم البينيين بعلامات النغمة، ثم المعنى بالعربية.',
+      '- أجب عن أي سؤال: كلمات وجمل خارج الدروس، ترجمة من وإلى العربية، قواعد، نطق ونغمات، ترتيب ضربات الحروف، ثقافة الصين، الامتحانات، خطط مذاكرة، وحتى الأسئلة العامة. في الأسئلة العامة أجب بإيجاز ثم اربطها بالصينية إن أمكن (مثل: كيف تُقال بالصينية).',
+      '- اشرح بعمق حين يُطلب الشرح: السبب، المقارنة بالعربية، الخطأ الشائع عند العرب، ومثالان. وكن مختصرًا في الأسئلة البسيطة.',
+      '- عند شرح حرف: فكّكه إلى مكوّناته وأعطِ حيلة حفظ بصرية، وقل إنها حيلة للحفظ إذا لم تكن أصل الحرف التاريخي.',
+      '- عند «اختبرني»: اسأل سؤالًا واحدًا فقط وانتظر، ثم صحّح إجابة الطالب بلطف واشرح الخطأ.',
+      '- اربط الشرح بما درسه الطالب قدر الإمكان، وإذا استخدمت كلمة جديدة فاشرحها.',
+      '- لا تخترع؛ إن لم تكن متأكدًا فقل ذلك.',
+      'الدرس المختار الآن: '+(L?L.title:''),
+      vocab?'مفرداته:\n'+vocab:'',
+      pats?'قواعده:\n'+pats:'',
+      others?'دروس أخرى درسها:\n'+others:'',
+      weak?'كلمات يحتاج تقويتها: '+weak:''
+    ].filter(Boolean).join('\n')+context();
+  }
   aiAsk=aiCall;
   function setBusy(value){busy=value;document.getElementById('tutorClear').disabled=value;bar.querySelector('button[onclick="chatSend()"]').disabled=value;panel.querySelectorAll('[data-tutor-question]').forEach(b=>b.disabled=value);}
   const replySchema={type:'object',required:['reply','words'],properties:{reply:{type:'string'},words:{type:'array',maxItems:3,items:MYWORD_SCHEMA}}};
@@ -104,10 +200,10 @@
     if(busy){toast('انتظر رد المعلّم أولًا');return;}
     if(panel.hidden)open();
     setBusy(true);chatAdd('u',esc(text));
-    if(!aiReady()){chatAdd('a',tutorAnswer(text));setBusy(false);return;}
+    if(!aiReady()){chatAdd('a','<p>'+esc(AI_ERRS.nokey)+'</p><div class="trow">'+actBtn('🤖 فعّل المعلّم الذكي','ai','')+'</div>'+tutorAnswer(text));setBusy(false);return;}
     typingOn();
     try{
-      const sys=aiSystem()+context()+'\nأجب عن أي كلمة أو ترجمة يطلبها الطالب، ولو لم تكن في الدرس. أعد JSON بالمخطط: reply يحتوي شرحك بالعربية والصينية والبينيين؛ words يحتوي فقط الكلمات الأساسية التي تشرحها في هذا الرد (حتى 3) مع بياناتها الصحيحة للحفظ. لا تضف كل كلمات الأمثلة. حقل syl نطق كل حرف على حدة. حقل tr حيلة للحفظ لا ادعاء عن أصل الحرف. يجوز words فارغًا في الأسئلة العامة. لا تقل إنك حفظت الكلمات، الطالب سيضغط زر الإضافة.';
+      const sys=tutorSystem()+'\nأجب عن أي كلمة أو ترجمة يطلبها الطالب، ولو لم تكن في الدرس. أعد JSON بالمخطط: reply يحتوي شرحك بالعربية والصينية والبينيين؛ words يحتوي فقط الكلمات الأساسية التي تشرحها في هذا الرد (حتى 3) مع بياناتها الصحيحة للحفظ. لا تضف كل كلمات الأمثلة. حقل syl نطق كل حرف على حدة. حقل tr حيلة للحفظ لا ادعاء عن أصل الحرف. يجوز words فارغًا في الأسئلة العامة. لا تقل إنك حفظت الكلمات، الطالب سيضغط زر الإضافة.';
       const r=await aiAsk(text,{system:sys,schema:replySchema,max:4096});
       let data;try{data=JSON.parse(r.text);}catch(_){throw AIErr('parse');}
       if(typeof data.reply!=='string'||!data.reply.trim())throw AIErr('parse');
@@ -117,12 +213,14 @@
       const keys=Object.keys(state.tutorWordSuggestions);for(const key of keys.slice(0,Math.max(0,keys.length-100)))delete state.tutorWordSuggestions[key];
       typingOff();chatAdd('a',chatFmt(data.reply)+aiFoot()+'<div class="trow">'+words.map(w=>actBtn((state.myWords||[]).some(x=>x.hz===w.hz)?'✓ '+w.hz+' في كلماتي':'＋ أضف '+w.hz+' إلى كلماتي','add',w.hz,'g')).join('')+'</div>');
     }
-    catch(e){typingOff();const available=tutorScore(text)>=70?tutorAnswer(text):'';chatAdd('a','<p>'+esc(AI_ERRS[e.code]||AI_ERRS.http)+'</p>'+available+'<div class="trow">'+actBtn('أعد المحاولة','retry',text)+'</div>');}
+    catch(e){typingOff();const available=tutorScore(text)>=70?tutorAnswer(text):'';const setup=(!SERVER&&['nokey','badkey'].includes(e.code))?actBtn('🤖 إعداد المعلّم الذكي','ai',''):'';chatAdd('a','<p>'+esc(AI_ERRS[e.code]||AI_ERRS.http)+'</p>'+(e.detail?'<p class="sml muted ltr">'+esc(e.detail)+'</p>':'')+available+'<div class="trow">'+setup+actBtn('أعد المحاولة','retry',text)+'</div>');}
     finally{setBusy(false);scroll();}
   };
   chatSend=function(){if(busy){toast('انتظر رد المعلّم أولًا');return;}const inp=document.getElementById('chatIn');const text=inp.value.trim();if(!text)return;inp.value='';tutorAsk(text);};
+  if(SERVER){
   aiPaint=function(){document.getElementById('aiState').innerHTML='<div class="note g"><b>المعلّم متصل بحساب Google</b>متاح من زر «المعلّم» في كل الصفحات. يحتاج الإنترنت وتطبق حدود Google المجانية.</div>';document.getElementById('aiOnBtn').textContent=state.set.aiOn===0?'مُعطّل — شغّله':'مفعّل — أوقفه';};
   aiTest=async function(){const el=document.getElementById('aiTest');el.textContent='جارٍ تجربة المعلّم…';try{const r=await aiCall('قل مرحبًا بالصينية مع البينيين والمعنى.',{turns:[]});el.textContent=r.text;}catch(e){el.textContent=AI_ERRS[e.code]||AI_ERRS.http;}};
+  }
   paintChat();context();
   new MutationObserver(()=>{if(!panel.hidden)context();}).observe(document.querySelector('main')||document.getElementById('pg-vocab'),{subtree:true,attributes:true,attributeFilter:['class'],childList:true});
 })();

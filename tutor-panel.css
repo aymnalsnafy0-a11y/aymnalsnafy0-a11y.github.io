@@ -12,3 +12,14 @@
 .tutor-panel .tutor-actions{padding:7px 10px;display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid #e5edf4}
 .tutor-actions button{background:#f4f8fc;border:1px solid #c9daec;color:#205f9f;border-radius:16px;padding:6px 10px;font:inherit;font-size:14px;cursor:pointer}
 @media(max-width:600px){.tutor-panel{inset-inline-start:8px;width:calc(100vw - 16px);bottom:calc(142px + env(safe-area-inset-bottom));height:min(600px,calc(100dvh - 160px))}.tutor-panel #chatBar .inrow{gap:4px}.tutor-panel .tutor-head{padding:9px 12px}}
+
+.tutor-panel{resize:both;min-width:280px;min-height:260px;max-width:100vw}
+.tutor-head{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+.tutor-panel.is-dragging .tutor-head{cursor:grabbing}
+.tutor-panel.is-dragging{box-shadow:0 20px 60px #163b6560}
+.tutor-panel.is-full{inset:0!important;left:0!important;top:0!important;right:0!important;bottom:0!important;width:100vw!important;height:100dvh!important;max-height:none;border-radius:0;border:0;resize:none;z-index:120}
+.tutor-panel.is-full .tutor-head{cursor:default}
+.tutor-panel.is-full .bubble{max-width:780px}
+.tutor-panel.is-full #chatLog{padding:14px max(12px,calc((100vw - 900px)/2))}
+#tutorFull{font-size:18px;min-width:38px}
+@media(max-width:600px){.tutor-panel{resize:none}}
