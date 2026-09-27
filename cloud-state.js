@@ -2,6 +2,8 @@
   'use strict';
   const safe=k=>!['__proto__','prototype','constructor'].includes(k);
   const copy=v=>JSON.parse(JSON.stringify(v));
+  // بيانات الميزات الجديدة تُزامَن كقيمة واحدة لكل حقل
+  const EXTRA=['hsk','pron','pronLog','dict','weekly','hidden'];
   function flatten(s){
     const out={};
     for(const field of ['w','wr','daily','personalKnown'])for(const [key,value]of Object.entries(s[field]||{}))if(safe(key))out[field+':'+key]=copy(value);
@@ -9,6 +11,7 @@
     for(const word of s.myWords||[])if(word.hz)out['word:'+word.hz]=copy(word);
     for(const pack of s.packs||[]){const id=(pack.lesson||pack).id;if(id)out['pack:'+id]=copy(pack);}
     if(s.streak)out.streak=copy(s.streak);
+    for(const f of EXTRA)if(s[f]!=null)out['x:'+f]=copy(s[f]);
     return out;
   }
   function changes(envelope,before,after,now=Date.now()){
@@ -37,6 +40,7 @@
       else if(kind==='pack')s.packs.push(value);
       else if(kind==='quiz'&&value.lesson&&safe(value.lesson)){(s.quiz[value.lesson]||(s.quiz[value.lesson]=[])).push(value.row);}
       else if(kind==='streak')s.streak=value;
+      else if(kind==='x'&&EXTRA.includes(id))s[id]=value;
     }
     for(const rows of Object.values(s.quiz))rows.sort((a,b)=>b.at-a.at);
     return s;

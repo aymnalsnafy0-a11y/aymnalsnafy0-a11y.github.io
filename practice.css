@@ -1,0 +1,15 @@
+.dict-mode{display:block;text-align:right;margin-bottom:8px}.dict-mode small{display:block;font-weight:400;font-size:13px;opacity:.85;margin-top:2px}
+.dict-head{display:flex;justify-content:space-between;font-weight:700;margin-bottom:8px;color:var(--muted,#5c6f82)}
+.dict-slot{min-height:58px;border:2px dashed var(--line,#d5e0ea);border-radius:12px;padding:8px;display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center;margin-bottom:10px;direction:ltr}
+.dict-pool{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:10px;direction:ltr}
+.dict-pool .tok[disabled]{opacity:.25}
+.dict-in{width:100%;box-sizing:border-box;font-size:22px;padding:12px;border-radius:12px;border:2px solid var(--line,#d5e0ea);margin-bottom:10px;text-align:center;font-family:inherit}
+.dict-mean .btn{margin-bottom:8px;text-align:right}
+.wk-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.wk-grid>div{background:var(--blue-bg,#eef5fc);border-radius:12px;padding:10px 6px;text-align:center;display:flex;flex-direction:column;gap:2px}
+.wk-grid b{font-size:22px}.wk-grid span{font-size:12px;color:var(--muted,#5c6f82)}
+.wk-grid small.up{color:#1f7a4d;font-size:13px}.wk-grid small.down{color:#b3261e;font-size:13px}
+.wk-h{margin:10px 0 6px;font-size:15px}.wk-weak{display:flex;flex-wrap:wrap;gap:6px}.wk-weak small{color:#b3261e}
+.wk-ai{line-height:1.9;margin-top:10px}
+#weekCard.wk-due{border-color:#f0b35a;box-shadow:0 0 0 2px #f0b35a44}
+@media(max-width:420px){.wk-grid{grid-template-columns:repeat(2,1fr)}}

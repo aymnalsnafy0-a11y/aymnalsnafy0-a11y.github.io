@@ -323,6 +323,8 @@
 <link rel="stylesheet" href="/account.css">
 <link rel="stylesheet" href="/theme.css">
 <link rel="stylesheet" href="hsk-exam.css">
+<link rel="stylesheet" href="voice.css">
+<link rel="stylesheet" href="practice.css">
 </head>
 <body>
 
@@ -1427,10 +1429,10 @@ function voiceBanner(ok, unsupported){
 if('speechSynthesis' in window) speechSynthesis.onvoiceschanged = initVoices;
 /* الأصوات العصبية المسجّلة: المفتاح الصيني بلا علامات ترقيم، والعربي نص المعنى كما هو */
 const AUDIO_NORM = s => String(s).replace(/[。，？！、,.?!；：\s…“”"'（）()]/g,'');
-function neuralSrc(lang, text){
+function neuralSrc(lang, text, gOverride){
   const idx = window.AUDIO_INDEX && window.AUDIO_INDEX[lang]; if(!idx || !text) return '';
   const id = idx[lang==='zh' ? AUDIO_NORM(text) : String(text)]; if(!id) return '';
-  const g = (lang==='zh' ? state.set.zhVoice : state.set.arVoice) === 'm' ? 'm' : 'f';
+  const g = gOverride || ((lang==='zh' ? state.set.zhVoice : state.set.arVoice) === 'm' ? 'm' : 'f');
   return 'audio/' + lang + '-' + g + '/' + id + '.mp3';
 }
 function markNeuralVoices(){
@@ -1446,9 +1448,9 @@ function setNeuralVoice(lang, g){
   else { const a = new Audio(neuralSrc('ar', 'مرحبًا') || neuralSrc('ar', Object.keys(window.AUDIO_INDEX.ar)[0])); a.play().catch(()=>{}); }
 }
 /* تشغيل نص صيني أو عربي بأفضل صوت متاح ويعيد Promise عند الانتهاء (للاختبار والإملاء) */
-function playText(text, lang, rate){
+function playText(text, lang, rate, g){
   return new Promise(res=>{
-    const src = neuralSrc(lang||'zh', text);
+    const src = neuralSrc(lang||'zh', text, g);
     if(src){
       stopChineseAudio();
       const a = new Audio(src); lessonAudioPlayer = a;
@@ -1506,6 +1508,11 @@ function speak(text, rate, repeat){
     player.onended = () => { if(lessonAudioPlayer===player) lessonAudioPlayer=null; afterChinese(); };
     player.onerror=failed;
     player.play().catch(failed);
+    return;
+  }
+  const parts = String(text).split(/(?<=[。！？!?])\s*/).map(x=>x.trim()).filter(Boolean);
+  if(parts.length > 1 && parts.every(x=>neuralSrc('zh', x))){
+    (async()=>{ for(const x of parts){ if(generation!==audioGeneration) return; await playText(x, 'zh', rate || state.set.rate || 0.8); } if(generation===audioGeneration) afterChinese(); })();
     return;
   }
   if(!('speechSynthesis' in window)){ stopChineseAudio();toast('لا يوجد مقطع مضمّن لهذا النص'); return; }
@@ -1796,6 +1803,7 @@ function paintVocab(){
       <button class="btn" onclick="speak('${speakHz(w)}')">🔊 انطقها</button>
       <button class="btn o" onclick="speak('${speakHz(w)}',0.55)">🐢 ببطء</button>
       <button class="btn o" onclick="openWrite('${wkey(w)}')">✍ اكتبها</button>
+      <button class="btn o" data-pron="${esc(speakHz(w))}" data-py="${esc(wordPy(w))}">🎤 قيّم نطقي</button>
     </div>
     <div class="row eq" style="margin-bottom:12px;flex-wrap:wrap">
       <button class="btn o" id="repeatWord" aria-pressed="false" onclick="toggleWordRepeat()">🔁 كرّر باستمرار</button>
@@ -1810,7 +1818,7 @@ function paintVocab(){
     ${perChar}
     ${w.tr ? `<div class="trick"><b>حيلة الحفظ:</b> ${w.tr}</div>` : ''}
     ${w.ex && w._S[w.ex] ? `<div class="exbox">
-      <span class="lbl">مثال ${speakBtn(sentHz(w.ex, w._S))}</span>
+      <span class="lbl">مثال ${speakBtn(sentHz(w.ex, w._S))} <button class="spk" data-pron="${esc(sentHz(w.ex, w._S))}" data-py="${esc(w._S[w.ex].t.map(t=>t[1]).join(' '))}" title="قيّم نطقي">🎤</button></span>
       <span class="hz exhz">${esc(sentHz(w.ex, w._S))}</span>
       ${sentPyHtml(w.ex, w._S)}
       <span class="exar">${esc(w._S[w.ex].ar)}</span>
@@ -2034,6 +2042,7 @@ function paintDlg(){
       </div>
       <div style="display:flex; flex-direction:column">
         ${speakBtn(hz)}
+        <button class="spk" data-pron="${esc(hz)}" data-py="${esc(d.s.map(k=>S[k].t.map(t=>t[1]).join(' ')).join(' '))}" title="قيّم نطقي">🎤</button>
         ${hide?`<button class="spk" onclick="dlgShow.role=false;paintDlg()">👁</button>`:''}
       </div>
     </div>`;
@@ -2042,21 +2051,25 @@ function paintDlg(){
 let dlgTimer = null;
 function playDialogue(){
   if(dlgTimer){
-    clearTimeout(dlgTimer); dlgTimer=null; stopChineseAudio();
+    dlgTimer=null; stopChineseAudio();
     $('#btnPlayAll').textContent='▶ تشغيل الحوار كاملًا';
     document.querySelectorAll('.said').forEach(s=>s.classList.remove('play')); return;
   }
   $('#btnPlayAll').textContent = '⏸ إيقاف';
-  let i = 0;
-  const step = () => {
-    document.querySelectorAll('.said').forEach(s=>s.classList.remove('play'));
-    if(i >= DLG.length){ dlgTimer=null; $('#btnPlayAll').textContent='▶ تشغيل الحوار كاملًا'; return; }
-    const row = $('#turn-'+i); row.querySelector('.said').classList.add('play');
-    try{ row.scrollIntoView({block:'center', behavior:'smooth'}); }catch(e){ try{ row.scrollIntoView(); }catch(_){} }
-    const hz = DLG[i].s.map(k=>sentHz(k)).join(' ');
-    speak(hz); i++; dlgTimer = setTimeout(step, 2600 + hz.length*230);
-  };
-  step(); touchStreak();
+  // كل متحدث بصوت: الأول رجل والثاني امرأة، وكل سطر ينتظر انتهاء السابق
+  const run = dlgTimer = {};
+  (async()=>{
+    for(let i=0; i<DLG.length; i++){
+      if(dlgTimer!==run) return;
+      document.querySelectorAll('.said').forEach(s=>s.classList.remove('play'));
+      const row = $('#turn-'+i); row.querySelector('.said').classList.add('play');
+      try{ row.scrollIntoView({block:'center', behavior:'smooth'}); }catch(e){ try{ row.scrollIntoView(); }catch(_){} }
+      for(const k of DLG[i].s){ if(dlgTimer!==run) return; await playText(sentHz(k), 'zh', Number(state.set.rate)||0.9, DLG[i].a===1?'m':'f'); }
+      await new Promise(r=>setTimeout(r, 450));
+    }
+    if(dlgTimer===run){ dlgTimer=null; $('#btnPlayAll').textContent='▶ تشغيل الحوار كاملًا'; document.querySelectorAll('.said').forEach(s=>s.classList.remove('play')); }
+  })();
+  touchStreak();
 }
 
 /* ==========================================================================
@@ -3632,6 +3645,8 @@ try{ boot(); }catch(e){ if(window.__fatal) window.__fatal('boot: ' + (e && e.mes
 <script src="/account.js"></script>
 <script src="hsk-data.js"></script>
 <script src="hsk-exam.js"></script>
+<script src="voice.js"></script>
+<script src="practice.js"></script>
 <script>
 if("serviceWorker" in navigator){
   var hadController = !!navigator.serviceWorker.controller;

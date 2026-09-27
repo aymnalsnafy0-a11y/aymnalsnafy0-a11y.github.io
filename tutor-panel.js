@@ -151,18 +151,22 @@
   // النماذج القديمة (2.5) لم تعد متاحة للمفاتيح الجديدة؛ ونماذج pro غير متاحة في الخطة المجانية.
   if(!state.set.aiModel||/^gemini-(1\.|2\.)/.test(state.set.aiModel)){state.set.aiModel='gemini-flash-latest';save();}
   const FALLBACK=['gemini-flash-latest','gemini-3.8-flash','gemini-3.7-flash','gemini-flash-lite-latest'];
-  const retryable=e=>e&&(['model','quota'].includes(e.code)||/^HTTP 5\d\d/.test(e.detail||''));
+  const retryable=e=>e&&(['model','quota','offline','abort'].includes(e.code)||/^HTTP 5\d\d/.test(e.detail||''))&&navigator.onLine!==false;
+  const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   aiCall=async function(text,opts){
     opts=Object.assign({},opts||{});
     if(opts.system==null)opts.system=tutorSystem();
     if(!opts.turns)opts.turns=aiTurns(20);
     if(opts.turns.length&&opts.turns[opts.turns.length-1].role==='u'&&opts.turns[opts.turns.length-1].text===text)opts.skipUser=true;
-    // إذا كان النموذج مزدحمًا (503) أو غير متاح أو تجاوز حدّه، جرّب التالي تلقائيًا
-    const models=[opts.model||aiModel(),...FALLBACK].filter((m,i,a)=>a.indexOf(m)===i);
+    // إذا كان النموذج مزدحمًا (503) أو تجاوز حدّ الدقيقة (429) ننتظر قليلًا ونعيد، ثم نجرّب النموذج التالي.
+    // مهام الصوت (images) لا تستخدم نموذج lite لأنه أضعف في السمع.
+    const models=[opts.model||aiModel(),...FALLBACK].filter((m,i,a)=>a.indexOf(m)===i&&!(opts.images&&opts.images.length&&/lite/.test(m)));
     let last;
     for(const model of models){
-      try{return await direct.call(text,Object.assign({},opts,{model}));}
-      catch(e){last=e;if(!retryable(e))throw e;}
+      for(let attempt=0;attempt<2;attempt++){
+        try{return await direct.call(text,Object.assign({},opts,{model}));}
+        catch(e){last=e;if(!retryable(e))throw e;if(e.code==='model')break;await sleep(attempt?0:2200);}
+      }
     }
     throw last;
   };
