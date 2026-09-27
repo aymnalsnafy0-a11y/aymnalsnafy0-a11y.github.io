@@ -125,7 +125,9 @@
   /* قائمة الدروس */
   .lesson{ border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:8px; background:#fff; cursor:pointer; }
   .lesson.cur{ border-color:var(--blue); background:var(--blue-bg); }
-  .lesson{ position:relative; }
+  .lesson{ position:relative; cursor:default; }
+  .lesson .lsel{ margin-top:8px; width:100%; }
+  .lesson .lsel[disabled]{ opacity:1; cursor:default; }
   .lesson h4{ margin:0 0 3px; font-size:14.5px; }
   .lesson .ldel{ position:absolute; top:8px; left:8px; border:1px solid var(--line); background:transparent; border-radius:8px; padding:3px 7px; font-size:14px; cursor:pointer; line-height:1.2; }
   .lesson:has(.ldel) h4{ padding-left:38px; }
@@ -1501,11 +1503,13 @@ function lessonStats(les){
 function lessonRows(inSheet){
   return LESSONS.map(les=>{
     const st = lessonStats(les);
-    return `<div class="lesson ${les.id===L.id?'cur':''}" onclick="switchLesson('${les.id}')">
+    const isCur = les.id===L.id;
+    return `<div class="lesson ${isCur?'cur':''}">
       <h4>${esc(les.title)} ${les.id===L.id?'<span class="pill kno">الحالي</span>':''}</h4>
       ${inSheet ? `<button class="ldel" title="حذف الدرس" aria-label="حذف الدرس" onclick="deleteLesson('${les.id}', event)">🗑</button>` : ''}
       <div class="meta">${st.total} كلمة · محفوظة ${st.known} · مستحقّة اليوم ${st.due} · إتقان ${st.pct}%</div>
       <div class="lbar"><i style="width:${st.pct}%"></i></div>
+      <button class="btn sm lsel ${isCur?'g':'o'}" ${isCur?'disabled':''} onclick="switchLesson('${les.id}')">${isCur?'✓ الدرس المختار':'اختيار هذا الدرس'}</button>
     </div>`;
   }).join('') + (inSheet && hiddenLessons().length
     ? `<button class="btn o sm wide" style="margin-top:4px" onclick="restoreLessons()">↩ استرجاع الدروس المحذوفة (${hiddenLessons().length})</button>` : '')
@@ -1588,11 +1592,11 @@ function completedTests(){
   return Object.entries(state.quiz||{}).flatMap(([id,rows])=>(Array.isArray(rows)?rows:[]).filter(q=>Number.isFinite(q.s)&&q.t>0&&q.s>=0&&q.s<=q.t).map(q=>({...q,lessonId:id}))).sort((a,b)=>b.at-a.at);
 }
 function overviewData(){
-  const all=LESSONS.flatMap(l=>l.words);
+  const all=W;
   const unique=arr=>new Set(arr.map(wordHz)).size;
   const learned=unique(all.filter(w=>status(w)==='known'));
   const due=unique(all.filter(isDue));
-  const tests=completedTests();
+  const tests=completedTests().filter(q=>q.lessonId===L.id);
   const day=state.daily?.[today()];
   const y=new Date();y.setDate(y.getDate()-1);
   return {total:unique(all),learned,due,tests,studied:new Set(day?.words||[]).size,goal:Number(state.set.dailyGoal)||5,streak:[today(),localDay(y)].includes(state.streak.last)?state.streak.n:0};
@@ -1604,7 +1608,7 @@ function paintOverview(){
   $('#globalQuiz').textContent=q ? q.s+'/'+q.t : '—';
   $('#alwaysKnown').textContent='محفوظة: '+d.learned+' / '+d.total;
   $('#alwaysQuiz').textContent='آخر اختبار: '+score;
-  $('#countExplanation').textContent='المحفوظة = كلمات أكّدت حفظها أو أجبت عنها صحيحًا، دون تكرار الكلمة بين الدروس. الإجابة الخاطئة تعيدها للمراجعة. الإتقان يقيس التكرار على مراحل.';
+  $('#countExplanation').textContent='هذه الأرقام خاصة بالدرس المختار «'+L.title+'». المحفوظة = كلمات أكّدت حفظها أو أجبت عنها صحيحًا، والإجابة الخاطئة تعيدها للمراجعة. لتغيير الدرس اضغط «اختيار» أمامه في قائمة دروسي.';
   $('#dailyGoal').value=String(d.goal);$('#dailyCount').textContent=d.studied+' / '+d.goal+' كلمات اليوم';
   $('#dailyProgress').max=d.goal;$('#dailyProgress').value=Math.min(d.studied,d.goal);
   $('#dailyHint').textContent=d.studied>=d.goal?'✓ حققت هدف اليوم! يمكنك الاكتفاء أو متابعة التدريب.':'تُحتسب الكلمة مرة واحدة يوميًا بعد تقييمها أو الإجابة عنها؛ مجرد فتحها لا يحتسب.';
@@ -1618,11 +1622,10 @@ function paintOverview(){
 }
 function setDailyGoal(value){state.set.dailyGoal=[3,5,10].includes(Number(value))?Number(value):5;save();paintHome();}
 function smartStudy(kind){
-  const all=LESSONS.flatMap(l=>l.words);
-  const filter=kind==='new'?w=>status(w)==='new':kind==='due'?isDue:all.some(isDue)?isDue:w=>status(w)==='new';
-  const w=W.find(filter)||all.find(filter);
-  if(!w){toast(kind==='due'?'لا توجد مراجعات مستحقّة الآن':'أكملت الكلمات الجديدة؛ اختبر نفسك أو راجع الأخطاء');go('quiz');return;}
-  useLesson(w._L);go('vocab');setFilter(isDue(w)&&kind!=='new'?'due':'new');
+  const filter=kind==='new'?w=>status(w)==='new':kind==='due'?isDue:W.some(isDue)?isDue:w=>status(w)==='new';
+  const w=W.find(filter);
+  if(!w){toast(kind==='due'?'لا توجد مراجعات مستحقّة في هذا الدرس الآن':'أكملت كلمات هذا الدرس الجديدة؛ اختبر نفسك أو راجع الأخطاء');go('quiz');return;}
+  go('vocab');setFilter(isDue(w)&&kind!=='new'?'due':'new');
   vList=vList.slice(0,Number(state.set.dailyGoal)||5);vPos=0;paintVocab();
 }
 function writeNextWord(){const w=W.find(w=>w.ch.some(c=>!state.wr[c[0]]))||W[0];if(w)openWrite(wkey(w));}
@@ -1643,7 +1646,8 @@ function paintHome(){
       <span class="hz">${wordHz(w)}</span>${esc(w.m.split(' /')[0])}</button>`;
   }).join('');
 
-  $('#mistakeList').innerHTML = state.mis.length ? state.mis.map(m=>{
+  const myMis = state.mis.filter(m => m.ref.startsWith(L.id+':') || m.ref.startsWith(L.id+'|'));
+  $('#mistakeList').innerHTML = myMis.length ? myMis.map(m=>{
     if(m.type==='word'){
       const w = findWord(m.ref); if(!w) return '';
       return `<div class="row" style="align-items:center; border-bottom:1px solid var(--line); padding:5px 0">
@@ -2427,11 +2431,11 @@ function tutorHelp(){
 }
 
 function tutorPlan(){
-  const all = LESSONS.reduce(function(a, l){ return a.concat(l.words); }, []);
+  const all = W;
   const due = all.filter(isDue).length;
   const nw = all.filter(function(w){ return status(w) === 'new'; }).length;
   const kn = all.filter(function(w){ return status(w) === 'known'; }).length;
-  const weak = pickWords(4, true).map(function(w){ return wordHz(w); }).join(' · ');
+  const weak = pickWords(4, false).map(function(w){ return wordHz(w); }).join(' · ');
   return '<p><b>خطة اليوم</b></p>'
     + '<p>🔥 سلسلتك: ' + state.streak.n + ' يومًا · محفوظة: ' + kn + ' · مستحقّة الآن: ' + due + ' · لم تبدأها: ' + nw + '</p>'
     + (weak ? '<p>أضعف كلماتك: <span class="hz">' + esc(weak) + '</span></p>' : '')

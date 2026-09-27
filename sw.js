@@ -1,4 +1,4 @@
-var CACHE = 'hsk-v17';
+var CACHE = 'hsk-v18';
 var ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', function(e){
