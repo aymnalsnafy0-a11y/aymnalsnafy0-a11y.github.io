@@ -1,0 +1,56 @@
+/* محاكي امتحان HSK 1 */
+body.hx-lock{overflow:hidden}
+.hx{position:fixed;inset:0;z-index:130;background:#f3f6fa;display:flex;flex-direction:column;font-family:inherit;color:#1c2b3a}
+.hx[hidden]{display:none}
+.hx-top{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;background:#8f1d21;color:#fff;flex-shrink:0}
+.hx-top b{display:block;font-size:16px}.hx-top small{display:block;font-size:12.5px;opacity:.9;line-height:1.5}
+.hx-top-r{display:flex;align-items:center;gap:8px}
+#hxClock{font-weight:700;font-variant-numeric:tabular-nums;background:#ffffff22;border-radius:8px;padding:3px 8px}#hxClock:empty{display:none}#hxClock.warn{background:#ffd54f;color:#5b1a00}
+.hx-x{background:transparent;border:1px solid #ffffff80;color:#fff;border-radius:9px;min-width:38px;min-height:36px;font:inherit;cursor:pointer}
+.hx-body{flex:1;overflow:auto;padding:14px;max-width:760px;width:100%;margin:0 auto;box-sizing:border-box}
+.hx-foot{display:flex;gap:8px;justify-content:center;align-items:center;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #dde5ee;flex-shrink:0;flex-wrap:wrap}
+.hx-card{background:#fff;border:1px solid #dde5ee;border-radius:16px;padding:16px;margin-bottom:12px}
+.hx-card h2{margin:0 0 8px;font-size:20px}.hx-card h3{margin:0 0 10px;font-size:16px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.hx-hero{background:linear-gradient(135deg,#fff5f3,#fff)}
+.hx-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}.hx-grid2>div{background:#f6f8fb;border-radius:12px;padding:10px;text-align:center;line-height:1.7}
+.hx-note{font-size:14px;color:#4a5d70;margin:8px 0 0}
+.hx-btn{font:inherit;border:1px solid #c9d6e3;background:#fff;color:#1f4f82;border-radius:12px;padding:10px 16px;cursor:pointer;min-height:44px;font-weight:700}
+.hx-btn:disabled{opacity:.45;cursor:default}
+.hx-btn.hx-main{background:#8f1d21;border-color:#8f1d21;color:#fff}
+.hx-btn.hx-submit{background:#1f7a4d;border-color:#1f7a4d;color:#fff}
+.hx-card .hx-btn{display:block;width:100%;text-align:right;margin-bottom:8px}.hx-card .hx-btn small{display:block;font-weight:400;font-size:13px;opacity:.85;margin-top:2px}
+.hx-pill{font-size:12.5px;background:#e8f5ee;color:#1f7a4d;border-radius:20px;padding:3px 10px;font-weight:700}
+.hx-hist{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px dashed #e1e8ef;font-size:14px}.hx-hist b.ok{color:#1f7a4d}.hx-hist b.no{color:#b3261e}
+.hx-intro{text-align:center;padding:30px 16px}.hx-big{font-size:54px}
+.hx-q{position:relative;padding-top:22px}
+.hx-num{position:absolute;top:-12px;right:14px;background:#8f1d21;color:#fff;border-radius:20px;padding:2px 12px;font-weight:700}
+.hx-pic{font-size:96px;text-align:center;line-height:1.2;margin:6px 0}
+.hx-word{text-align:center;font-size:30px;margin-bottom:8px}
+.hx-sent{font-size:26px;text-align:center;margin:8px 0 14px;line-height:2.1;direction:ltr}
+.hx ruby{ruby-position:over}.hx rt{font-size:.45em;color:#5c6f82;font-family:Arial,sans-serif}
+.hx-blank{display:inline-block;min-width:2.2em;border-bottom:2px solid #8f1d21;color:#8f1d21}
+.hx-judge{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hx-opts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.hx-opts.six{grid-template-columns:repeat(3,1fr)}
+.hx-opt{font:inherit;background:#f8fafc;border:2px solid #d5e0ea;border-radius:14px;padding:10px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;min-height:64px;color:#1c2b3a}
+.hx-opt.sel{border-color:#1f5f9e;background:#e8f1fb;box-shadow:0 0 0 2px #1f5f9e33}
+.hx-opt.right{border-color:#1f7a4d;background:#e8f5ee}.hx-opt.wrong{border-color:#b3261e;background:#fdecea}
+.hx-l{font-weight:800;color:#8f1d21;font-family:Arial,sans-serif}
+.hx-emo{font-size:48px;line-height:1.1}.hx-txt{font-size:21px;direction:ltr;line-height:2}
+.hx-play{display:block;margin:0 auto 12px;text-align:center}.hx-play.on{background:#fff4e5;border-color:#f0b35a}
+.hx-auto{background:#fff4e5;border-radius:10px;padding:8px;color:#7a4a00;font-weight:700}
+.hx-cd{font-size:14px;color:#4a5d70}
+.hx-exp{margin-top:14px;border-radius:12px;padding:10px 12px;line-height:2}.hx-exp.ok{background:#e8f5ee}.hx-exp.no{background:#fdecea}.hx-exp b{display:block}
+.hx-exp ruby{font-size:19px}
+.hx-pal{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:4px 0 10px}
+.hx-pal button{font:inherit;width:36px;height:36px;border-radius:9px;border:1px solid #cfdae5;background:#fff;cursor:pointer;font-size:13px}
+.hx-pal button.done{background:#dcebf9;border-color:#9dbfe0}.hx-pal button.cur{outline:3px solid #8f1d21}
+.hx-result{text-align:center}.hx-result.ok{background:linear-gradient(135deg,#e8f5ee,#fff)}.hx-result.no{background:linear-gradient(135deg,#fdf1ef,#fff)}
+.hx-score{font-size:60px;font-weight:800;color:#8f1d21}.hx-score small{font-size:22px;color:#5c6f82}
+.hx-bar{display:grid;grid-template-columns:1fr 90px 36px;gap:8px;align-items:center;font-size:13.5px;margin:6px 0}
+.hx-bar i{height:9px;background:#edf1f5;border-radius:6px;overflow:hidden;display:block}.hx-bar u{display:block;height:100%;background:#1f7a4d;text-decoration:none}
+.hx-rev{border-bottom:1px solid #edf1f5;padding:8px 0}.hx-rev summary{cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.hx-rev.ok summary span{color:#1f7a4d}.hx-rev.no summary span{color:#b3261e}
+.hx-mini{font:inherit;border:1px solid #cfdae5;background:#fff;border-radius:8px;padding:2px 8px;cursor:pointer}
+@media(max-width:520px){.hx-pic{font-size:80px}.hx-emo{font-size:40px}.hx-sent{font-size:22px}.hx-txt{font-size:18px}.hx-opts,.hx-opts.six{gap:7px}.hx-btn{padding:9px 12px}}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .hx{background:#0f1720;color:#e6edf3}:root:not([data-theme="light"]) .hx-card,:root:not([data-theme="light"]) .hx-foot,:root:not([data-theme="light"]) .hx-opt,:root:not([data-theme="light"]) .hx-btn:not(.hx-main):not(.hx-submit),:root:not([data-theme="light"]) .hx-pal button{background:#16212c;color:#e6edf3;border-color:#2a3a4a}:root:not([data-theme="light"]) .hx-grid2>div{background:#1c2935}:root:not([data-theme="light"]) .hx rt{color:#9fb3c6}}
+.hx-zh{unicode-bidi:isolate;direction:ltr;display:inline-block}
