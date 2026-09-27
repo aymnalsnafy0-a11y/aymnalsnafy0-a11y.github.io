@@ -125,7 +125,11 @@
   /* قائمة الدروس */
   .lesson{ border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:8px; background:#fff; cursor:pointer; }
   .lesson.cur{ border-color:var(--blue); background:var(--blue-bg); }
+  .lesson{ position:relative; }
   .lesson h4{ margin:0 0 3px; font-size:14.5px; }
+  .lesson .ldel{ position:absolute; top:8px; left:8px; border:1px solid var(--line); background:transparent; border-radius:8px; padding:3px 7px; font-size:14px; cursor:pointer; line-height:1.2; }
+  .lesson:has(.ldel) h4{ padding-left:38px; }
+  .lesson .ldel:hover{ border-color:var(--red); background:var(--red-bg); }
   .lesson .meta{ font-size:12px; color:var(--muted); }
   .lbar{ height:6px; background:#e7edf3; border-radius:99px; margin-top:6px; overflow:hidden; }
   .lbar > i{ display:block; height:100%; background:var(--green); border-radius:99px; }
@@ -1499,10 +1503,13 @@ function lessonRows(inSheet){
     const st = lessonStats(les);
     return `<div class="lesson ${les.id===L.id?'cur':''}" onclick="switchLesson('${les.id}')">
       <h4>${esc(les.title)} ${les.id===L.id?'<span class="pill kno">الحالي</span>':''}</h4>
+      ${inSheet ? `<button class="ldel" title="حذف الدرس" aria-label="حذف الدرس" onclick="deleteLesson('${les.id}', event)">🗑</button>` : ''}
       <div class="meta">${st.total} كلمة · محفوظة ${st.known} · مستحقّة اليوم ${st.due} · إتقان ${st.pct}%</div>
       <div class="lbar"><i style="width:${st.pct}%"></i></div>
     </div>`;
-  }).join('') + (LESSONS.length===1 && !inSheet
+  }).join('') + (inSheet && hiddenLessons().length
+    ? `<button class="btn o sm wide" style="margin-top:4px" onclick="restoreLessons()">↩ استرجاع الدروس المحذوفة (${hiddenLessons().length})</button>` : '')
+    + (LESSONS.length===1 && !inSheet
     ? '<p class="sml muted" style="margin:6px 0 0">أرسل لي صور درسك القادم وسأجهّزه لك كحزمة تضيفها من الزر أدناه.</p>' : '');
 }
 function switchLesson(id){
@@ -1510,6 +1517,31 @@ function switchLesson(id){
   closeModal('mdLesson'); go('home');
 }
 function paintLessonSheet(){ $('#lessonSheet').innerHTML = lessonRows(true); }
+/* حذف درس من القائمة: يُخفى فقط، ويبقى تقدّمه محفوظًا ليُسترجع لاحقًا */
+function hiddenLessons(){ return Array.isArray(state.hidden) ? state.hidden : (state.hidden = []); }
+function applyHidden(){
+  const h = hiddenLessons();
+  for(let i = LESSONS.length - 1; i >= 0; i--) if(h.includes(LESSONS[i].id)) LESSONS.splice(i, 1);
+}
+function deleteLesson(id, ev){
+  if(ev) ev.stopPropagation();
+  const les = LESSONS.find(x=>x.id===id); if(!les) return;
+  if(LESSONS.filter(x=>x.id!=='LX').length <= 1){ toast('لا يمكن حذف آخر درس'); return; }
+  if(!confirm('حذف «' + les.title + '» من قائمة الدروس؟\nتقدّمك فيه يبقى محفوظًا، ويمكنك استرجاعه من أسفل القائمة.')) return;
+  hiddenLessons().push(id); save();
+  applyHidden(); tagLessons();
+  if(L.id === id) useLesson((LESSONS.find(x=>x.id!=='LX') || LESSONS[0]).id);
+  paintLessonSheet(); paintHome();
+  toast('حُذف الدرس: ' + les.title);
+}
+function restoreLessons(){
+  state.hidden = []; save();
+  LESSONS.splice(0, LESSONS.length, ...(window.__baseLessons || LESSONS));
+  loadPacks(); tagLessons(); buildMyLesson();
+  try{ AIDX = null; }catch(e){}
+  useLesson(state.cur); paintLessonSheet(); paintHome();
+  toast('تم استرجاع الدروس');
+}
 
 function installPack(){
   const raw = $('#packBox').value.trim();
@@ -1525,6 +1557,7 @@ function installPack(){
   }
   if(p.strokes){ Object.assign(window.HZ_DATA = window.HZ_DATA || {}, p.strokes); }
   state.packs = state.packs.filter(x => (x.lesson||x).id !== les.id);
+  state.hidden = hiddenLessons().filter(x => x !== les.id);
   state.packs.push(p); save();
   const i = LESSONS.findIndex(x=>x.id===les.id);
   if(i>=0) LESSONS[i] = les; else LESSONS.push(les);
@@ -1545,6 +1578,7 @@ function loadPacks(){
     const i = LESSONS.findIndex(x=>x.id===les.id);
     if(i>=0) LESSONS[i] = les; else LESSONS.push(les);
   });
+  applyHidden();
 }
 
 /* ==========================================================================
