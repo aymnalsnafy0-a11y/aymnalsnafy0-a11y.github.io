@@ -2773,13 +2773,16 @@ const AI_PROVIDERS = {
     },
     fail: function(st, body){
       var msg = '';
-      try{ var j = JSON.parse(body); msg = (j.error && j.error.message) || ''; }catch(e){ msg = String(body || '').slice(0, 140); }
+      var qid = '';
+      try{ var j = JSON.parse(body); msg = (j.error && j.error.message) || '';
+        (j.error && j.error.details || []).forEach(function(d){ (d.violations || []).forEach(function(v){ if(v.quotaId) qid += v.quotaId + ' '; }); });
+      }catch(e){ msg = String(body || '').slice(0, 140); }
       var e2;
       if(st === 429) e2 = AIErr('quota');
       else if(st === 403 || (st === 400 && /API[_ ]?key|API_KEY_INVALID/i.test(body))) e2 = AIErr('badkey');
       else if(st === 404) e2 = AIErr('model');
       else e2 = AIErr('http');
-      e2.detail = 'HTTP ' + st + (msg ? ' — ' + String(msg).slice(0, 180) : '');
+      e2.detail = 'HTTP ' + st + (qid ? ' [' + qid.trim() + ']' : '') + (msg ? ' — ' + String(msg).slice(0, 180) : '');
       return e2;
     }
   },

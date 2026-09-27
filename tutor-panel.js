@@ -150,7 +150,24 @@
   AI_ERRS.nokey='المعلّم الذكي يحتاج مفتاح Gemini مجانيًا مرة واحدة فقط. اضغط «فعّل المعلّم الذكي» واتبع الخطوات (دقيقتان).';
   // النماذج القديمة (2.5) لم تعد متاحة للمفاتيح الجديدة؛ ونماذج pro غير متاحة في الخطة المجانية.
   if(!state.set.aiModel||/^gemini-(1\.|2\.)/.test(state.set.aiModel)){state.set.aiModel='gemini-flash-latest';save();}
-  const FALLBACK=['gemini-flash-latest','gemini-3.8-flash','gemini-3.7-flash','gemini-flash-lite-latest'];
+  /* الخطة المجانية: حدّ يومي صغير (≈20 طلبًا) لكل نموذج على حدة.
+     لذلك نوزّع الطلبات على كل نماذج flash المتاحة للمفتاح، ونتخطّى أي نموذج استنفد حصته حتى نهاية اليوم. */
+  const BASE=['gemini-flash-latest','gemini-3.8-flash','gemini-3.7-flash','gemini-3.6-flash','gemini-3.5-flash','gemini-3-flash-preview','gemini-3.1-flash-lite','gemini-flash-lite-latest','gemini-3.5-flash-lite'];
+  const SKIP=/tts|image|live|transcribe|omni|robotics|computer|embedding|audio|native/;
+  const ver=m=>{const v=(m.match(/(\d+(?:\.\d+)?)/)||[0,0])[1];return /latest/.test(m)?99:Number(v);};
+  async function modelList(){
+    const c=state.set.aiModels;
+    if(c&&c.day===today()&&c.list&&c.list.length)return c.list;
+    try{
+      const r=await fetch(AI_PROVIDERS.gemini.base+'models?pageSize=200',{headers:{'x-goog-api-key':aiKey()}});
+      if(r.ok){const j=await r.json();const list=(j.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent')).map(m=>m.name.replace('models/','')).filter(m=>/^gemini-.*flash/.test(m)&&!SKIP.test(m));
+        if(list.length){state.set.aiModels={day:today(),list};save();return list;}}
+    }catch(_){}
+    return BASE;
+  }
+  // النماذج التي استنفدت حصتها اليوم (تُمسح تلقائيًا في يوم جديد)
+  const spent=()=>{const s=state.set.aiSpent;if(!s||s.day!==today())state.set.aiSpent={day:today(),m:{}};return state.set.aiSpent.m;};
+  const isDaily=e=>e&&e.code==='quota'&&(/PerDay/i.test(e.detail||'')||!/PerMinute|minute/i.test(e.detail||''));
   const retryable=e=>e&&(['model','quota','offline','abort'].includes(e.code)||/^HTTP 5\d\d/.test(e.detail||''))&&navigator.onLine!==false;
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
   aiCall=async function(text,opts){
@@ -158,18 +175,28 @@
     if(opts.system==null)opts.system=tutorSystem();
     if(!opts.turns)opts.turns=aiTurns(20);
     if(opts.turns.length&&opts.turns[opts.turns.length-1].role==='u'&&opts.turns[opts.turns.length-1].text===text)opts.skipUser=true;
-    // إذا كان النموذج مزدحمًا (503) أو تجاوز حدّ الدقيقة (429) ننتظر قليلًا ونعيد، ثم نجرّب النموذج التالي.
-    // مهام الصوت (images) لا تستخدم نموذج lite لأنه أضعف في السمع.
-    const models=[opts.model||aiModel(),...FALLBACK].filter((m,i,a)=>a.indexOf(m)===i&&!(opts.images&&opts.images.length&&/lite/.test(m)));
+    const avail=await modelList();
+    const lite=m=>/lite/.test(m);
+    // الأقوى أولًا، ونماذج lite في النهاية (وفي مهام السمع هي آخر حل فقط)
+    const pool=[opts.model||aiModel(),...BASE.filter(m=>avail.includes(m)),...avail.slice().sort((x,y)=>ver(y)-ver(x))]
+      .filter((m,i,arr)=>arr.indexOf(m)===i);
+    const models=pool.filter(m=>!lite(m)).concat(pool.filter(lite)).filter(m=>!spent()[m]);
+    if(!models.length){const e=AIErr('quota');e.detail='daily: all models';throw e;}
     let last;
     for(const model of models){
       for(let attempt=0;attempt<2;attempt++){
         try{return await direct.call(text,Object.assign({},opts,{model}));}
-        catch(e){last=e;if(!retryable(e))throw e;if(e.code==='model')break;await sleep(attempt?0:2200);}
+        catch(e){
+          last=e;if(!retryable(e))throw e;
+          if(e.code==='model'){spent()[model]=1;save();break;}
+          if(e.code==='quota'){if(isDaily(e)||attempt){spent()[model]=1;save();break;}await sleep(2500);continue;}
+          if(attempt)break;await sleep(1200);
+        }
       }
     }
     throw last;
   };
+  AI_ERRS.quota='انتهت حصة Google المجانية لليوم في كل النماذج المتاحة لمفتاحك. تتجدّد تلقائيًا بعد منتصف الليل بتوقيت أمريكا (حوالي ١٠ صباحًا بتوقيت السعودية). تقدر تواصل الدروس والامتحان والإملاء بلا أي مشكلة.';
   aiPaint=function(){
     const st=document.getElementById('aiState');
     if(st&&!document.getElementById('aiKeyIn')){
