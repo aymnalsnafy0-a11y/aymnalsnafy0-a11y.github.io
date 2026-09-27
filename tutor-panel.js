@@ -148,12 +148,23 @@
   }else{
   aiReady=direct.ready;aiModel=direct.model;aiTest=direct.test;
   AI_ERRS.nokey='المعلّم الذكي يحتاج مفتاح Gemini مجانيًا مرة واحدة فقط. اضغط «فعّل المعلّم الذكي» واتبع الخطوات (دقيقتان).';
-  aiCall=function(text,opts){
+  // النماذج القديمة (2.5) لم تعد متاحة للمفاتيح الجديدة؛ ونماذج pro غير متاحة في الخطة المجانية.
+  if(!state.set.aiModel||/^gemini-(1\.|2\.)/.test(state.set.aiModel)){state.set.aiModel='gemini-flash-latest';save();}
+  const FALLBACK=['gemini-flash-latest','gemini-3.8-flash','gemini-3.7-flash','gemini-flash-lite-latest'];
+  const retryable=e=>e&&(['model','quota'].includes(e.code)||/^HTTP 5\d\d/.test(e.detail||''));
+  aiCall=async function(text,opts){
     opts=Object.assign({},opts||{});
     if(opts.system==null)opts.system=tutorSystem();
     if(!opts.turns)opts.turns=aiTurns(20);
     if(opts.turns.length&&opts.turns[opts.turns.length-1].role==='u'&&opts.turns[opts.turns.length-1].text===text)opts.skipUser=true;
-    return direct.call(text,opts);
+    // إذا كان النموذج مزدحمًا (503) أو غير متاح أو تجاوز حدّه، جرّب التالي تلقائيًا
+    const models=[opts.model||aiModel(),...FALLBACK].filter((m,i,a)=>a.indexOf(m)===i);
+    let last;
+    for(const model of models){
+      try{return await direct.call(text,Object.assign({},opts,{model}));}
+      catch(e){last=e;if(!retryable(e))throw e;}
+    }
+    throw last;
   };
   aiPaint=function(){
     const st=document.getElementById('aiState');
@@ -163,7 +174,7 @@
         +'٢) اضغط <span class="ltr">Create API key</span> وانسخ المفتاح.<br>٣) الصقه هنا واضغط «حفظ»، ثم «جرّب الاتصال».'
         +'<input id="aiKeyIn" type="password" dir="ltr" autocomplete="off" placeholder="AIza..." style="width:100%;margin-top:8px">'
         +'<div class="row eq" style="margin-top:6px"><button class="btn" onclick="aiSaveKey()">حفظ</button><button class="btn o" onclick="aiClearKey()">حذف المفتاح</button></div>'
-        +'<label class="sml" style="display:block;margin-top:8px">النموذج (الأذكى: pro، والأسرع: flash)<select id="aiModelSel" onchange="aiPickModel()" dir="ltr" style="width:100%"></select></label>'
+        +'<label class="sml" style="display:block;margin-top:8px">النموذج (المقترح: gemini-flash-latest — نماذج pro تحتاج حسابًا مدفوعًا)<select id="aiModelSel" onchange="aiPickModel()" dir="ltr" style="width:100%"></select></label>'
         +'<p class="sml muted" style="margin:6px 0 0">المفتاح يبقى في هذا الجهاز فقط، ولا يدخل في «نسخ تقدّمي».</p></div>');
     }
     direct.paint();
@@ -211,7 +222,7 @@
       state.tutorWordSuggestions=state.tutorWordSuggestions||{};
       for(const w of words)state.tutorWordSuggestions[w.hz]=w;
       const keys=Object.keys(state.tutorWordSuggestions);for(const key of keys.slice(0,Math.max(0,keys.length-100)))delete state.tutorWordSuggestions[key];
-      typingOff();chatAdd('a',chatFmt(data.reply)+aiFoot()+'<div class="trow">'+words.map(w=>actBtn((state.myWords||[]).some(x=>x.hz===w.hz)?'✓ '+w.hz+' في كلماتي':'＋ أضف '+w.hz+' إلى كلماتي','add',w.hz,'g')).join('')+'</div>');
+      typingOff();chatAdd('a',chatFmt(data.reply.replace(/\n\s*\n+/g,'\n').trim())+aiFoot()+'<div class="trow">'+words.map(w=>actBtn((state.myWords||[]).some(x=>x.hz===w.hz)?'✓ '+w.hz+' في كلماتي':'＋ أضف '+w.hz+' إلى كلماتي','add',w.hz,'g')).join('')+'</div>');
     }
     catch(e){typingOff();const available=tutorScore(text)>=70?tutorAnswer(text):'';const setup=(!SERVER&&['nokey','badkey'].includes(e.code))?actBtn('🤖 إعداد المعلّم الذكي','ai',''):'';chatAdd('a','<p>'+esc(AI_ERRS[e.code]||AI_ERRS.http)+'</p>'+(e.detail?'<p class="sml muted ltr">'+esc(e.detail)+'</p>':'')+available+'<div class="trow">'+setup+actBtn('أعد المحاولة','retry',text)+'</div>');}
     finally{setBusy(false);scroll();}
