@@ -1,0 +1,14 @@
+.fab,body.showfab .fab{display:block;width:auto;height:48px;padding:0 17px;border-radius:24px;font-family:inherit;font-size:16px;font-weight:700;z-index:90;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab}
+.fab.is-dragging{cursor:grabbing;box-shadow:0 8px 24px #163b6560}
+.tutor-panel{position:fixed;inset-inline-start:16px;bottom:calc(145px + env(safe-area-inset-bottom));width:min(440px,calc(100vw - 24px));height:min(620px,calc(100dvh - 175px));background:#fff;border:1px solid #bdd0e3;border-radius:20px;box-shadow:0 15px 55px #163b6540;z-index:89;display:flex;flex-direction:column;overflow:hidden;text-align:right}
+.tutor-panel[hidden]{display:none}
+.tutor-head{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#205f9f;color:white;gap:8px}
+.tutor-head strong{font-size:18px}.tutor-head button{border:1px solid #ffffff70;background:transparent;color:white;border-radius:9px;min-height:36px;padding:5px 10px;font:inherit;cursor:pointer}
+.tutor-context{padding:8px 14px;font-size:14px;color:#38556c;background:#eff6fc;flex-shrink:0}
+.tutor-panel #chatLog{overflow:auto;overscroll-behavior:contain;flex:1;padding:10px 12px;min-height:0;scroll-behavior:smooth}
+.tutor-panel .bubble{overflow-wrap:anywhere;min-width:0;font-size:16px;line-height:1.9}.tutor-panel .bubble .hz{font-size:24px;line-height:1.5}
+.tutor-panel #chatBar{display:block!important;position:static!important;transform:none!important;padding:9px;flex-shrink:0;z-index:auto}
+.tutor-panel #chatIn{min-width:0;width:0;font-size:16px}.tutor-panel #chatBar .btn{padding:10px}
+.tutor-panel .tutor-actions{padding:7px 10px;display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid #e5edf4}
+.tutor-actions button{background:#f4f8fc;border:1px solid #c9daec;color:#205f9f;border-radius:16px;padding:6px 10px;font:inherit;font-size:14px;cursor:pointer}
+@media(max-width:600px){.tutor-panel{inset-inline-start:8px;width:calc(100vw - 16px);bottom:calc(142px + env(safe-area-inset-bottom));height:min(600px,calc(100dvh - 160px))}.tutor-panel #chatBar .inrow{gap:4px}.tutor-panel .tutor-head{padding:9px 12px}}
