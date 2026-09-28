@@ -579,10 +579,12 @@
 <div class="modal" id="mdPack">
   <div class="sheet">
     <h3><span>إضافة درس جديد</span><span><button class="btn o sm" onclick="closeModal('mdPack')">إغلاق ✕</button></span></h3>
-    <div class="note b"><b>كيف تضيف درسًا؟</b>
-      أسرع طريقة: افتح تبويب <b>المعلّم</b> واضغط 📷 وصوّر صفحة الدرس — يقرأها التطبيق ويبني الدرس بنفسه. أو صوّرها داخل التطبيق وأرسلها لي لأجهّز «حزمة درس» تلصقها هنا.</div>
+    <button class="btn wide" style="padding:14px;font-size:16px;margin-bottom:8px" onclick="closeModal('mdPack');openTutorPanel();photoPick()">📷 صوّر صفحات الدرس (حتى ٢٠ صفحة)</button>
+    <p class="sml muted" style="margin:0 0 12px">اختر كل صور الدرس مرة واحدة وبترتيب الصفحات. يقرأها المعلّم الذكي ويبني الكلمات والنصوص والحوار والقواعد، ثم تراجعها وتركّبها. تأخذ دقيقة إلى ثلاث دقائق.</p>
+    <details class="vopts"><summary>عندي نص «حزمة درس» جاهزة</summary><div>
     <textarea id="packBox" placeholder="الصق نص حزمة الدرس هنا…"></textarea>
     <button class="btn wide" style="margin-top:8px" onclick="installPack()">تركيب الدرس</button>
+    </div></details>
     <div id="packMsg" style="margin-top:9px"></div>
     <details style="margin-top:11px">
       <summary>ما الذي يجب أن تحتويه الصور؟</summary>
@@ -3337,7 +3339,7 @@ function myWordAdd(q){
    المرحلة ٣ — قراءة صور الدرس وتحويلها إلى درس داخل التطبيق
    دفعة حتى 20 صفحة · استخراج بمخطّط صارم ثم مراجعة على الصور ثم معاينة
    ========================================================================== */
-const P3_CHUNK = 3, P3_MAXIMG = 20, P3_MAXWORDS = 35;
+const P3_CHUNK = 10, P3_MAXIMG = 20, P3_MAXWORDS = 40;
 let pendImgs = [], pendPacks = [], pendWarn = [], p3Busy = false, p3NoSchema = 0;
 
 function shrinkImg(file, max, q){
@@ -3368,8 +3370,8 @@ const LESSON_SCHEMA = {
     title: { type: 'string' },
     groups: { type: 'array', items: { type: 'object', required: ['n', 'name'],
       properties: { n: { type: 'integer' }, name: { type: 'string' } } } },
-    sents: { type: 'array', items: { type: 'object', required: ['k', 't', 'ar'], properties: {
-      k: { type: 'string' },
+    sents: { type: 'array', items: { type: 'object', required: ['k', 'zh', 't', 'ar'], properties: {
+      k: { type: 'string' }, zh: { type: 'string' },
       t: { type: 'array', items: { type: 'object', required: ['hz', 'py', 'ar'], properties: {
         hz: { type: 'string' }, py: { type: 'string' }, ar: { type: 'string' } } } },
       ar: { type: 'string' }, q: { type: 'boolean' } } } },
@@ -3385,21 +3387,25 @@ const LESSON_SCHEMA = {
 };
 
 const EXTRACT_SYS = [
-  'أنت مساعد يستخرج درس لغة صينية من صور صفحات كتاب أو سبورة، لطالب عربي مبتدئ.',
-  'قواعد صارمة:',
-  '- استخرج ما في الصور فقط. لا تخترع كلمة غير موجودة فيها.',
-  '- الحروف الصينية مبسّطة فقط.',
-  '- syl = مصفوفة نطق كل حرف على حدة بعلامات النغمة، طولها = عدد حروف hz بالضبط.',
-  '- m = المعنى بالعربية بكلمتين أو ثلاث.',
-  '- tr = حيلة حفظ عربية قصيرة تفكّك الحرف وتربطه بمعناه، مثل: «高 عالٍ + 兴 مزاج ⟶ مزاجه عالٍ = سعيد».',
-  '- g = رقم المجموعة من groups (اجمع الكلمات في مجموعات موضوعية).',
-  '- ex = مفتاح جملة من sents تستخدم الكلمة.',
-  '- كل جملة تُقسَّم إلى وحدات t: لكل وحدة hz و py و ar (معنى الوحدة بكلمة).',
-  '- مفاتيح k: حروف إنجليزية صغيرة وأرقام وشرطة سفلية فقط.',
-  '- patterns = قوالب القواعد الظاهرة في الصفحة: name اسم القاعدة بالعربية، f القالب مثل «شخص + 是 + الهوية»،',
-  '  s مفتاح جملة تمثّلها، why شرح عربي مختصر لسبب الترتيب، bad الخطأ الشائع عند الناطقين بالعربية، drill مفتاح جملة للتمرين.',
-  '- dialogue = الحوار إن وُجد في الصفحة: who اسم المتحدّث، a رقم 1 أو 2، s مفاتيح جمله بالترتيب.',
-  '- title بالعربية يصف موضوع الصفحات.'
+  'أنت معلّم لغة صينية خبير تحوّل صور صفحات درس من الكتاب إلى درس تفاعلي لطالب عربي مبتدئ.',
+  'اقرأ كل الصفحات معًا كدرس واحد، بترتيبها. استخرج ما فيها فقط ولا تخترع كلمات غير موجودة.',
+  'المطلوب:',
+  '- title: عنوان عربي قصير يصف الدرس ثم عنوانه الصيني بين قوسين، مثل: «أنا صيني (我是中国人)».',
+  '- sents: كل سطر في كل نص/حوار (课文 Text 1، 2، 3…) بالترتيب الأصلي وبدون حذف أي سطر، حتى الأسطر القصيرة جدًا مثل «姐姐！» أو «喂，一飞！»،',
+  '  ثم جمل أمثلة القواعد. عُدّ الأسطر في الصور وتأكد أن عددها مطابق. لكل جملة k مفتاح إنجليزي قصير (حروف صغيرة وأرقام و_)،',
+  '  zh الجملة كاملة بالحروف كما في الكتاب حرفًا حرفًا، وt تقسيمها إلى كلمات تغطي كل حروفها بلا حذف: لكل كلمة hz الحروف، py البينيين بعلامات النغمة،',
+  '  ar معناها بكلمة. ar ترجمة عربية للجملة، q=true للسؤال.',
+  '- dialogue: عنصر لكل دور كلام بالترتيب الأصلي تمامًا (لا تجمع دورين لنفس المتحدث في عنصر واحد): who اسم المتحدّث كما في الكتاب،',
+  '  a=1 للمتحدث الأول في كل نص و2 للثاني، s مفاتيح جمل ذلك الدور فقط.',
+  '- words: كل كلمات قوائم «生词 New Words» و«专有名词 Proper Nouns» (وأهم كلمات النصوص إن لم توجد قائمة). hz الحروف،',
+  '  syl نطق كل حرف على حدة بعلامات النغمة (طولها = عدد الحروف)، m المعنى بالعربية بكلمتين أو ثلاث،',
+  '  tr حيلة حفظ عربية تذكر الحروف أو مكوّناتها نفسها وتربطها بالمعنى (مثل: «忄 قلب + 亡 ضياع ⟶ قلب ضائع من الانشغال = مشغول»،',
+  '  «中 وسط + 国 دولة ⟶ الدولة الوسطى = الصين»). ممنوع أن يكون tr نوع الكلمة مثل n. أو pron.،',
+  '  g رقم المجموعة، ex مفتاح جملة من sents تحتوي الكلمة.',
+  '- groups: مجموعات عربية للكلمات حسب أقسام الدرس (مثل: «النص ١: الجنسية»، «النص ٢: مَن هذا؟»).',
+  '- patterns: كل نقطة قواعد في الدرس (مثل 小语讲堂): name اسمها بالعربية، f القالب مثل «فاعل + 是 + الاسم»، s مفتاح جملة تمثّلها،',
+  '  why شرح عربي مختصر، bad الخطأ الشائع عند العرب، drill مفتاح جملة أخرى تطبّق نفس القاعدة تمامًا (مختلفة عن s إن أمكن). لا تكرر نفس القاعدة.',
+  '- الحروف المبسّطة فقط، والبينيين بعلامات النغمة لا بالأرقام.'
 ].join('\n');
 
 const VERIFY_SYS = [
@@ -3426,15 +3432,15 @@ function p3Json(txt){
   if(i >= 0 && j > i) s = s.slice(i, j + 1);
   return JSON.parse(s);
 }
-function p3One(imgs, sys, text, useSchema){
+function p3One(imgs, sys, text, useSchema, think){
   const o = { system: useSchema ? sys : (sys + JSON_HINT), images: imgs,
-    model: 'gemini-2.5-flash', temp: 0.15, max: 8192, noThink: true, web: false, turns: [], timeout: 120000 };
+    temp: 0.15, max: think ? 32000 : 16000, noThink: !think, web: false, turns: [], noRole: true, timeout: 240000 };
   if(useSchema) o.schema = LESSON_SCHEMA;
   return aiCall(text, o);
 }
 function p3Chunk(imgs, tries){
-  const ask = 'اقرأ هذه الصور واستخرج الدرس كاملًا.';
-  return p3One(imgs, EXTRACT_SYS, ask, true)
+  const ask = 'هذه صفحات درس واحد بالترتيب. استخرج الدرس كاملًا: كل الكلمات، وكل أسطر النصوص والحوارات، وكل نقاط القواعد.';
+  return p3One(imgs, EXTRACT_SYS, ask, true, true)
     .then(function(r){ return p3Json(r.text); })
     .catch(function(e){
       // بعض المفاتيح/النماذج ترفض المخطّط الصارم أو تعيد نصًّا غير نقيّ
@@ -3446,7 +3452,7 @@ function p3Chunk(imgs, tries){
     })
     .then(function(raw){
       if(!raw || !raw.words || !raw.words.length) throw AIErr('empty');
-      return p3One(imgs, VERIFY_SYS, 'راجع هذا الاستخراج مقابل الصور وصحّحه:\n' + JSON.stringify(raw).slice(0, 14000), !p3NoSchema)
+      return p3One(imgs, VERIFY_SYS, 'راجع هذا الاستخراج مقابل الصور وصحّحه:\n' + JSON.stringify(raw).slice(0, 40000), !p3NoSchema)
         .then(function(r2){
           try{ const v = p3Json(r2.text); return (v && v.words && v.words.length) ? v : raw; }catch(e){ return raw; }
         }, function(){ return raw; });
@@ -3479,6 +3485,12 @@ function validatePack(raw, taken){
   if(!Object.keys(out.groups).length) out.groups[1] = 'مفردات الدرس';
 
   const kmap = {}, used = {};
+  // خريطة نطق الحروف من كل ما قرأه النموذج، لإكمال أي كلمة سقطت من تقسيم الجملة
+  const pyOf = {}, mOf = {};
+  (raw && raw.words || []).forEach(function(w){ const hz = String((w && w.hz) || '').replace(/[^一-鿿]/g, ''); if(hz && w.m && !mOf[hz]) mOf[hz] = String(w.m).slice(0, 30); });
+  (raw && raw.words || []).forEach(function(w){ const hz = String((w && w.hz) || ''); (w && w.syl || []).forEach(function(p, i){ if(hz[i] && p && !pyOf[hz[i]]) pyOf[hz[i]] = String(p); }); });
+  (raw && raw.sents || []).forEach(function(s){ (s && s.t || []).forEach(function(t){ const hz = String((t && t.hz) || ''), ps = String((t && t.py) || '').split(/\s+/);
+    if(hz.length === 1 && t.py && !pyOf[hz]) pyOf[hz] = String(t.py); else if(ps.length === hz.length) ps.forEach(function(p, i){ if(!pyOf[hz[i]]) pyOf[hz[i]] = p; }); }); });
   (raw && raw.sents || []).forEach(function(s, i){
     const orig = String((s && s.k) || '');
     let k = orig.toLowerCase().replace(/[^a-z0-9_]/g, '');
@@ -3489,6 +3501,19 @@ function validatePack(raw, taken){
       if(!hz) return;
       toks.push([hz, String((t && t.py) || '').slice(0, 30), esc(String((t && t.ar) || '').slice(0, 30))]);
     });
+    // مطابقة التقسيم مع الجملة الكاملة وإكمال الحروف الساقطة
+    const full = String((s && s.zh) || '').replace(/[^一-鿿]/g, '');
+    if(full && toks.map(function(t){ return t[0]; }).join('').replace(/[^一-鿿]/g, '') !== full){
+      const fixed = []; let pos = 0;
+      toks.forEach(function(t){
+        const core = t[0].replace(/[^一-鿿]/g, ''); if(!core){ fixed.push(t); return; }
+        const at = full.indexOf(core, pos); if(at < 0) return;
+        if(at > pos){ const gap = full.slice(pos, at); fixed.push([gap, gap.split('').map(function(c){ return pyOf[c] || ''; }).join(''), esc(mOf[gap] || '')]); }
+        fixed.push(t); pos = at + core.length;
+      });
+      if(pos < full.length){ const gap = full.slice(pos); fixed.push([gap, gap.split('').map(function(c){ return pyOf[c] || ''; }).join(''), esc(mOf[gap] || '')]); }
+      if(fixed.map(function(t){ return t[0]; }).join('').replace(/[^一-鿿]/g, '') === full){ toks.length = 0; fixed.forEach(function(t){ toks.push(t); }); warn.push('أُكملت كلمة ناقصة في جملة'); }
+    }
     if(!toks.length || !s.ar){ warn.push('جملة ناقصة حُذفت'); return; }
     used[k] = 1; kmap[orig] = k;
     out.sents[k] = { t: toks, ar: esc(String(s.ar).slice(0, 140)), q: !!s.q };
@@ -3511,7 +3536,7 @@ function validatePack(raw, taken){
     const g = (w && out.groups[w.g]) ? w.g : Object.keys(out.groups)[0];
     const word = { id: out.words.length + 1, g: parseInt(g, 10),
       ch: chars.map(function(c, i){ return [c, syl[i] || '']; }),
-      m: esc(m.slice(0, 60)), tr: esc(String((w && w.tr) || '').slice(0, 240)) };
+      m: esc(m.slice(0, 60)), tr: /^\s*(n|v|adj|adv|pron|part|int|num|m|prep|conj|proper\s*nouns?)\.?\s*$/i.test(String((w && w.tr) || '')) ? '' : esc(String((w && w.tr) || '').slice(0, 240)) };
     if(dpy) word.dpy = dpy;
     if(ex) word.ex = ex;
     out.words.push(word);
@@ -3534,6 +3559,19 @@ function validatePack(raw, taken){
     if(!keys.length) return;
     out.dialogue.push({ who: esc(String((d && d.who) || 'أ').slice(0, 14)), a: (d && d.a === 2) ? 2 : 1, s: keys });
   });
+  // إصلاح الحوار: فكّ الأدوار المدموجة وإعادتها لترتيب ظهور الجمل في النص، ثم دمج الأدوار المتتالية لنفس المتحدث
+  if(out.dialogue.length){
+    const order = Object.keys(out.sents), flat = [];
+    out.dialogue.forEach(function(d){ d.s.forEach(function(k){ flat.push({ who: d.who, a: d.a, k: k }); }); });
+    flat.sort(function(x, y){ return order.indexOf(x.k) - order.indexOf(y.k); });
+    const turns = [];
+    flat.forEach(function(x){
+      const last = turns[turns.length - 1];
+      if(last && last.who === x.who && order.indexOf(x.k) === order.indexOf(last.s[last.s.length - 1]) + 1) last.s.push(x.k);
+      else turns.push({ who: x.who, a: x.a, s: [x.k] });
+    });
+    out.dialogue = turns;
+  }
   if(out.dialogue.length) out.dlgTitle = 'حوار الدرس';
 
   if(out.words.length < 2) return { err: 'لم أقرأ كلمات كافية من هذه الصفحات.', warn: warn };
@@ -3608,8 +3646,12 @@ function photoGo(input){
   chatAdd('a', '<p id="' + sid + '">جارٍ تجهيز الصور…</p><div class="lbar"><i id="' + sid + 'b" style="width:4%"></i></div>'
     + '<p class="sml muted">اتركه يعمل — الصفحات تُقرأ ثلاثًا ثلاثًا ثم تُراجَع.</p>');
   function setS(t, pct){
+    const w = Math.max(4, Math.min(100, pct));
     const e = document.getElementById(sid); if(e) e.textContent = t;
-    const b = document.getElementById(sid + 'b'); if(b) b.style.width = Math.max(4, Math.min(100, pct)) + '%';
+    const b = document.getElementById(sid + 'b'); if(b) b.style.width = w + '%';
+    const m = (state.chat || []).find(function(x){ return x.h && x.h.indexOf('id="' + sid + '"') >= 0; });
+    if(m){ m.h = '<p id="' + sid + '">' + esc(t) + '</p><div class="lbar"><i id="' + sid + 'b" style="width:' + w + '%"></i></div>'
+      + '<p class="sml muted">اتركه يعمل — قد يأخذ دقيقة إلى ثلاث دقائق، وأطول إذا كانت خوادم Google مزدحمة.</p>'; save(); }
   }
   const parts = [], fails = [];
   Promise.all(files.map(function(f){ return shrinkImg(f, 1100, 0.72); }))
@@ -3621,7 +3663,7 @@ function photoGo(input){
       function step(){
         if(i >= chunks.length) return Promise.resolve();
         const from = i * P3_CHUNK + 1, to = Math.min(files.length, (i + 1) * P3_CHUNK);
-        setS('قراءة الصفحات ' + from + '–' + to + ' من ' + files.length + '…', (i / chunks.length) * 100);
+        setS(chunks.length > 1 ? 'قراءة الصفحات ' + from + '–' + to + ' من ' + files.length + '…' : 'أقرأ ' + files.length + ' صفحة وأرتّب الدرس…', 10 + (i / chunks.length) * 80);
         return p3Chunk(chunks[i]).then(function(r){
           if(r && r.words && r.words.length) parts.push(r); else fails.push(from + '–' + to);
         }, function(e){
