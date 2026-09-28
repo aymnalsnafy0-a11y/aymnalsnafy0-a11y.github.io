@@ -325,6 +325,7 @@
 <link rel="stylesheet" href="hsk-exam.css">
 <link rel="stylesheet" href="voice.css">
 <link rel="stylesheet" href="practice.css">
+<link rel="stylesheet" href="ui.css">
 </head>
 <body>
 
@@ -352,66 +353,85 @@
 
 <header>
   <div class="htop">
-    <div style="flex:1">
-      <h1 id="hTitle">دروس الصينية التفاعلية
-        <span class="sub" id="hSub">—</span>
-      </h1>
-    </div>
-    <div class="clock" id="clock" title="توقيت مكة المكرمة"></div>
-    <button class="iconbtn" id="btnLessons" title="الدروس">📘<span class="btxt"> الدروس</span></button>
-    <button class="iconbtn" id="btnSet" title="إعدادات">⚙</button>
+    <h1 id="hTitle" class="sr-only">دروس الصينية التفاعلية</h1>
+    <button class="lesson-chip" id="btnLessons" title="اختر الدرس" aria-label="اختر الدرس">
+      <span class="lc-ico">📘</span><span class="lc-txt" id="hSub">—</span><span class="lc-arrow">▾</span>
+    </button>
+    <div class="clock" id="clock" hidden></div>
+    <button class="iconbtn" id="btnSet" title="الإعدادات" aria-label="الإعدادات">⚙</button>
   </div>
-  <div class="bar"><i id="barFill"></i></div>
-  <div class="barlbl"><span id="barTxt">—</span><span id="barPct">0%</span></div>
-<div class="overview-strip" aria-live="polite"><span id="alwaysKnown">المحفوظة: —</span><span id="alwaysQuiz">آخر اختبار: —</span></div>
+  <div class="bar" title="تقدّمك في الدرس"><i id="barFill"></i></div>
+  <div class="barlbl" hidden><span id="barTxt">—</span><span id="barPct">0%</span></div>
+  <div hidden><span id="alwaysKnown"></span><span id="alwaysQuiz"></span></div>
 </header>
 
 <main>
 
-<!-- ============ الرئيسية ============ -->
+<!-- ============ الرئيسية: شاشة واحدة واضحة ============ -->
 <section class="page on" id="pg-home">
   <div class="card" id="installCard" style="display:none"></div>
+
   <div class="card study-hero">
-    <div class="sml">خطوتك التالية في الصينية</div>
-    <h2>قليل كل يوم، وتقدّم تراه</h2>
-    <p id="nextStudyText"></p>
-    <button class="btn wide" id="nextStudyBtn" data-study="auto">ابدأ جلستك</button>
-  </div>
-  <div class="overview-grid" aria-live="polite">
-    <div class="stat g"><u id="stKnown">0</u><span>كلمة محفوظة مختلفة</span></div>
-    <div class="stat r"><u id="stDue">0</u><span>كلمة مستحقّة للمراجعة</span></div>
-    <div class="stat"><u id="globalQuiz">—</u><span>آخر اختبار من كل الدروس</span></div>
-    <div class="stat streak"><u id="stStreak">0</u><span>أيام مذاكرة متتابعة</span></div>
-  </div>
-  <p class="sml muted" id="countExplanation"></p>
-  <div class="card">
-    <h2 class="sec"><b>☀</b> هدف اليوم</h2>
-    <div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b id="dailyCount"></b>
-      <label class="sml">هدفي <select id="dailyGoal" data-daily-goal aria-label="عدد كلمات الهدف اليومي"><option value="3">3 كلمات</option><option value="5">5 كلمات</option><option value="10">10 كلمات</option></select></label>
+    <div class="hero-top">
+      <div><div class="sml hero-lbl">درسك الآن</div><b id="pathLesson" class="hero-lesson"></b></div>
+      <button class="hero-change" onclick="openModal('mdLesson')">تغيير</button>
+    </div>
+    <div class="hero-goal">
+      <span id="dailyCount"></span>
+      <label class="sml">الهدف <select id="dailyGoal" data-daily-goal aria-label="عدد كلمات الهدف اليومي"><option value="3">3</option><option value="5">5</option><option value="10">10</option></select></label>
     </div>
     <progress class="goal-track" id="dailyProgress" value="0" max="5"></progress>
-    <p class="sml muted" id="dailyHint"></p>
-    <div class="row eq"><button class="btn g" data-study="due">راجع المستحقّ</button><button class="btn" data-study="new">تعلّم كلمات جديدة</button></div>
+    <p id="nextStudyText" class="hero-txt"></p>
+    <button class="btn wide hero-go" id="nextStudyBtn" data-study="auto">ابدأ</button>
+    <p class="sml" id="dailyHint" hidden></p>
   </div>
-  <div class="card">
-    <h2 class="sec"><b>▶</b> مسارك في الدرس الحالي</h2>
-    <p class="sml muted" id="pathLesson"></p>
-    <div class="study-path">
-      <button onclick="go('vocab')">① اسمع وافهم<small id="btnAllWords">كل المفردات</small></button>
-      <button data-write-next>② اكتب رمزًا<small>شاهد الخطوات ثم جرّب بنفسك</small></button>
-      <button onclick="go('dlg')">③ تدرّب على الحوار<small>استمع ثم جرّب دور أحد المتحدثين</small></button>
-      <button onclick="go('quiz')">④ اختبر نفسك<small>نتيجتك تُحفظ بعد إكمال الاختبار</small></button>
+
+  <div class="mini-stats" aria-live="polite">
+    <div><u id="stStreak">0</u><span>🔥 أيام</span></div>
+    <div><u id="stKnown">0</u><span>✓ محفوظة</span></div>
+    <button data-study="due"><u id="stDue">0</u><span>⏰ للمراجعة</span></button>
+    <div><u id="stQuiz">—</u><span>🎯 آخر اختبار</span></div>
+  </div>
+
+  <div class="tiles">
+    <button class="tile" onclick="go('vocab')"><i>📚</i><b>المفردات</b><small id="btnAllWords">كل الكلمات</small></button>
+    <button class="tile" data-write-next><i>✍️</i><b>الكتابة</b><small>ارسم الحروف</small></button>
+    <button class="tile" onclick="go('dlg')"><i>🗣</i><b>الحوار</b><small>استمع ومثّل</small></button>
+    <button class="tile" onclick="openDictation()"><i>🎧</i><b>الإملاء</b><small>درّب أذنك</small></button>
+    <button class="tile" onclick="openHskExam()"><i>📝</i><b>امتحان HSK</b><small>٤٠ سؤالًا</small></button>
+    <button class="tile" id="weekTile" onclick="openWeekly()"><i>🗓</i><b>الأسبوعية</b><small id="weekTileTxt">تقريرك</small></button>
+  </div>
+
+  <details class="card fold">
+    <summary>📊 كلمات الدرس وتقدّمك</summary>
+    <div class="stats" style="margin:10px 0 9px">
+      <div class="stat"><u id="stMastery">0%</u><span>إتقان</span></div>
+      <div class="stat v"><u id="stWritten">0</u><span>حرف كتبته</span></div>
+      <div class="stat"><u id="globalQuiz">—</u><span>اختبار كل الدروس</span></div>
     </div>
-  </div>
-  <div class="card"><h2 class="sec"><b>🏅</b> نتائجك الأخيرة</h2><div id="recentQuizzes"></div></div>
-  <div class="card">
-    <h2 class="sec"><b>📘</b> دروسي</h2>
-    <div id="lessonList"></div>
-    <button class="btn o sm wide" onclick="openModal('mdPack')" style="margin-top:4px">➕ إضافة درس جديد</button>
-  </div>
-  <div class="note sml" style="margin-bottom:12px">كزائر، تقدّمك محفوظ على هذا الجهاز. افتح «حسابي» وسجّل الدخول لمزامنة تقدّمك ودروسك وكلماتك بين أجهزتك.
-    <button class="btn o sm" onclick="exportProgress()">نسخ تقدّمي</button><button class="btn o sm" onclick="openModal('mdSet')">استرجاع تقدّم سابق</button>
-  </div>
+    <div id="homeGrid" class="chips"></div>
+    <p class="sml muted" style="margin:9px 0 0">الأخضر = محفوظة · الأصفر = تحتاج تكرارًا · الرمادي = لم تبدأ. اضغط أي كلمة لتفتحها.</p>
+    <p class="sml muted" id="countExplanation"></p>
+    <p class="sml muted" style="margin:6px 0 0">🔁 كل «حفظتها» تؤجّل الكلمة: يوم ← ٣ أيام ← أسبوع ← أسبوعان ← شهر، و«تحتاج مراجعة» ترجعها خطوة.</p>
+  </details>
+
+  <details class="card fold">
+    <summary>🎯 أخطائي</summary>
+    <div id="mistakeList" style="margin-top:8px"></div>
+  </details>
+
+  <details class="card fold">
+    <summary>🏅 نتائجي الأخيرة</summary>
+    <div id="recentQuizzes" style="margin-top:8px"></div>
+  </details>
+
+  <details class="card fold">
+    <summary>💾 حفظ تقدّمي</summary>
+    <p class="sml" style="margin:8px 0">تقدّمك محفوظ على هذا الجهاز. سجّل الدخول من 👤 لمزامنته بين أجهزتك، أو انسخه احتياطيًا:</p>
+    <div class="row eq"><button class="btn o sm" onclick="exportProgress()">📤 نسخ تقدّمي</button><button class="btn o sm" onclick="openModal('mdSet')">📥 استرجاع</button></div>
+  </details>
+
+  <div id="lessonList" hidden></div>
 
   <div class="card" id="voiceCard" style="display:none">
     <div class="note r" id="voiceMsg"></div>
@@ -419,54 +439,22 @@
 
   <div class="card" id="storeCard" style="display:none">
     <div class="note r"><b>هذا العارض يمنع حفظ التقدّم</b>
-      <span class="sml">كل شيء يعمل، لكن ما تحفظه سيضيع عند إغلاق الصفحة. الحل: افتح الملف من داخل تطبيق
-      <b>Documents</b> (متصفّحه الداخلي)، أو اطلب منّي نسخة على رابط تعمل كتطبيق بأيقونة.
-      ومؤقتًا استخدم ⚙ ← <b>📤 نسخ تقدّمي</b> قبل الإغلاق.</span></div>
-  </div>
-
-  <div class="card">
-    <h2 class="sec"><b>📊</b> تقدّمك في هذا الدرس</h2>
-    <div class="stats" style="margin-bottom:9px">
-      <div class="stat"><u id="stMastery">0%</u><span>إتقان المراجعة المتكررة</span></div>
-      <div class="stat v"><u id="stWritten">0</u><span>حرفًا كتبته صحيحًا</span></div>
-      <div class="stat"><u id="stQuiz">—</u><span>آخر نتيجة اختبار</span></div>
-    </div>
-    <div id="homeGrid" class="chips"></div>
-    <p class="sml muted" style="margin:9px 0 0">اضغط أي كلمة لتفتحها. الأخضر = محفوظة، الأصفر = تحتاج تكرارًا، الرمادي = لم تبدأ بعد.</p>
-  </div>
-
-  <div class="card">
-    <h2 class="sec"><b>🎯</b> أخطائي — راجعها أولًا</h2>
-    <div id="mistakeList"></div>
-  </div>
-
-  <div class="card">
-    <h2 class="sec"><b>🔁</b> كيف يعمل التكرار المتباعد؟</h2>
-    <p class="sml" style="margin:0 0 6px">كل ما تضغط «حفظتها» تنتقل الكلمة لمرحلة أعلى، ويرجّعها التطبيق في الموعد المناسب قبل أن تنساها:</p>
-    <div class="chips sml">
-      <span class="pill new">جديدة</span> <span class="pill lrn">بعد يوم</span>
-      <span class="pill lrn">بعد ٣ أيام</span> <span class="pill kno">بعد أسبوع</span>
-      <span class="pill kno">بعد أسبوعين</span> <span class="pill kno">بعد شهر</span>
-    </div>
-    <p class="sml muted" style="margin:7px 0 0">وإذا ضغطت «تحتاج مراجعة» ترجع الكلمة خطوة واحدة للوراء وتظهر لك غدًا.</p>
+      <span class="sml">كل شيء يعمل، لكن ما تحفظه سيضيع عند إغلاق الصفحة. افتح الموقع من متصفح Chrome أو Safari، ومؤقتًا استخدم ⚙ ← <b>📤 نسخ تقدّمي</b> قبل الإغلاق.</span></div>
   </div>
 </section>
 
 <!-- ============ المفردات ============ -->
 <section class="page" id="pg-vocab">
-  <div class="card" style="padding:9px 10px">
-    <div class="row sml" style="align-items:center">
-      <span class="muted">اعرض:</span>
+  <div class="filter-row" role="tablist" aria-label="اعرض">
       <button class="btn o sm" data-f="all" onclick="setFilter('all')">الكل</button>
       <button class="btn o sm" data-f="due" onclick="setFilter('due')">المستحقّ</button>
       <button class="btn o sm" data-f="new" onclick="setFilter('new')">الجديدة</button>
       <button class="btn o sm" data-f="weak" onclick="setFilter('weak')">الضعيفة</button>
       <button class="btn o sm" data-f="known" onclick="setFilter('known')">المحفوظة</button>
-    </div>
   </div>
   <div class="card" id="vcard"></div>
   <div class="card">
-    <h2 class="sec"><b>🗂</b> انتقال سريع</h2>
+    <h2 class="sec"><b>🗂</b> كل كلمات الدرس</h2>
     <div id="vocabGrid" class="chips"></div>
   </div>
 </section>
@@ -573,7 +561,10 @@
   <div class="sheet">
     <h3><span>الدروس</span><span><button class="btn o sm" onclick="closeModal('mdLesson')">إغلاق ✕</button></span></h3>
     <div id="lessonSheet"></div>
-    <button class="btn o wide sm" onclick="closeModal('mdLesson');openModal('mdPack')" style="margin-top:6px">➕ إضافة درس جديد</button>
+    <div class="lesson-tools">
+      <button class="btn o sm" onclick="closeModal('mdLesson');openModal('mdPack')">➕ إضافة درس</button>
+      <button class="btn o sm" id="lessonEdit" onclick="toggleLessonEdit()">✏️ تعديل القائمة</button>
+    </div>
   </div>
 </div>
 
@@ -1545,7 +1536,7 @@ function go(p){
   if(p==='home')paintHome();
   try{ document.body.classList.toggle('chat', p==='chat'); document.body.classList.toggle('showfab', p==='vocab'||p==='gram'||p==='dlg'); }catch(e){}
 }
-function openModal(id){ if(id==='mdPrev') prevPaint(); if(id==='mdAI') aiPaint(); if(id==='mdLesson') paintLessonSheet(); if(id==='mdPack') paintInstalled(); $('#'+id).classList.add('on'); }
+function openModal(id){ if(id==='mdPrev') prevPaint(); if(id==='mdAI') aiPaint(); if(id==='mdLesson'){ paintLessonSheet(); toggleLessonEdit(false); } if(id==='mdPack') paintInstalled(); $('#'+id).classList.add('on'); }
 function closeModal(id){
   $('#'+id).classList.remove('on');
   if(id==='mdWrite') stopWriters();
@@ -1567,11 +1558,11 @@ function lessonRows(inSheet){
     const st = lessonStats(les);
     const isCur = les.id===L.id;
     return `<div class="lesson ${isCur?'cur':''}">
-      <h4>${esc(les.title)} ${les.id===L.id?'<span class="pill kno">الحالي</span>':''}</h4>
-      ${inSheet ? `<button class="ldel" title="حذف الدرس" aria-label="حذف الدرس" onclick="deleteLesson('${les.id}', event)">🗑</button>` : ''}
-      <div class="meta">${st.total} كلمة · محفوظة ${st.known} · مستحقّة اليوم ${st.due} · إتقان ${st.pct}%</div>
+      <h4>${esc(les.title)}</h4>
+      ${inSheet ? `<button class="btn sm o ldel" title="حذف الدرس" aria-label="حذف الدرس" onclick="deleteLesson('${les.id}', event)">🗑 حذف</button>` : ''}
+      <div class="meta">${st.total} كلمة · ${st.known} محفوظة${st.due?' · '+st.due+' للمراجعة':''} · ${st.pct}%</div>
       <div class="lbar"><i style="width:${st.pct}%"></i></div>
-      <button class="btn sm lsel ${isCur?'g':'o'}" ${isCur?'disabled':''} onclick="switchLesson('${les.id}')">${isCur?'✓ الدرس المختار':'اختيار هذا الدرس'}</button>
+      <button class="btn sm lsel ${isCur?'g':''}" ${isCur?'disabled':''} onclick="switchLesson('${les.id}')">${isCur?'✓ الحالي':'اختيار'}</button>
     </div>`;
   }).join('') + (inSheet && hiddenLessons().length
     ? `<button class="btn o sm wide" style="margin-top:4px" onclick="restoreLessons()">↩ استرجاع الدروس المحذوفة (${hiddenLessons().length})</button>` : '')
@@ -1583,6 +1574,10 @@ function switchLesson(id){
   closeModal('mdLesson'); go('home');
 }
 function paintLessonSheet(){ $('#lessonSheet').innerHTML = lessonRows(true); }
+function toggleLessonEdit(force){
+  const sh = $('#lessonSheet'), on = force != null ? force : !sh.classList.contains('editing');
+  sh.classList.toggle('editing', on); $('#lessonEdit').textContent = on ? '✓ تم' : '✏️ تعديل القائمة';
+}
 /* حذف درس من القائمة: يُخفى فقط، ويبقى تقدّمه محفوظًا ليُسترجع لاحقًا */
 function hiddenLessons(){ return Array.isArray(state.hidden) ? state.hidden : (state.hidden = []); }
 function applyHidden(){
@@ -1794,28 +1789,29 @@ function paintVocab(){
     </div>
     <div class="bighz"><button type="button" class="hz" style="background:none;border:0;cursor:pointer" onclick="speak('${speakHz(w)}')" aria-label="انطق الكلمة بالصينية">${wordHz(w)}</button></div>
     <div class="bigpy ${vHide.pin?'hidden-txt':''}" onclick="vHide.pin=false;paintVocab()">${wordPyHtml(w)}</div>
-    <div style="text-align:center;margin:8px 0">
-      <button class="btn o sm" aria-pressed="${!!state.set.arabicPronunciation}" onclick="toggleArabicPronunciation()">${state.set.arabicPronunciation?'إخفاء':'إظهار'} النطق بالعربي</button>
+    <div style="text-align:center;margin:4px 0 6px">
       ${state.set.arabicPronunciation ? `<div class="${vHide.pin?'hidden-txt':''}" dir="rtl" style="font-size:24px;font-weight:700;color:var(--violet);margin-top:5px" onclick="vHide.pin=false;paintVocab()">${esc(wordArabicPronunciation(w))}</div><div class="sml muted">نطق تقريبي — استمع للصوت لضبط النغمات</div>` : ''}
     </div>
     <div class="bigmean ${vHide.mean?'hidden-txt':''}" onclick="vHide.mean=false;paintVocab()">${esc(w.m)}</div>
-    <div class="row eq" style="margin-bottom:10px">
-      <button class="btn" onclick="speak('${speakHz(w)}')">🔊 انطقها</button>
-      <button class="btn o" onclick="speak('${speakHz(w)}',0.55)">🐢 ببطء</button>
-      <button class="btn o" onclick="openWrite('${wkey(w)}')">✍ اكتبها</button>
-      <button class="btn o" data-pron="${esc(speakHz(w))}" data-py="${esc(wordPy(w))}">🎤 قيّم نطقي</button>
+    <div class="vactions">
+      <button class="main" onclick="speak('${speakHz(w)}')"><i>🔊</i>استمع</button>
+      <button onclick="speak('${speakHz(w)}',0.55)"><i>🐢</i>ببطء</button>
+      <button data-pron="${esc(speakHz(w))}" data-py="${esc(wordPy(w))}"><i>🎤</i>انطق</button>
+      <button onclick="openWrite('${wkey(w)}')"><i>✍️</i>اكتب</button>
     </div>
-    <div class="row eq" style="margin-bottom:12px;flex-wrap:wrap">
-      <button class="btn o" id="repeatWord" aria-pressed="false" onclick="toggleWordRepeat()">🔁 كرّر باستمرار</button>
-      <label class="repeat-meaning"><input type="checkbox" ${state.set.repeatMeaning?'checked':''} onchange="setRepeatMeaning(this.checked)"> مع نطق المعنى بالعربي</label>
-      <label style="display:flex;align-items:center;gap:8px">سرعة الصوت
-        <select aria-label="سرعة نطق الكلمة" onchange="changeWordRate(this.value)" style="font:inherit;padding:10px;border-radius:10px">
-          ${[0.5,0.6,0.8,1,1.25,1.5].map(r=>'<option value="'+r+'" '+(Math.abs((state.set.rate||0.8)-r)<.01?'selected':'')+'>'+r+'×</option>').join('')}
-        </select>
-      </label>
-    </div>
-      ${memoryPictureCard(w)}
-    ${perChar}
+    <details class="vopts" ${state.set.vOptsOpen?'open':''} ontoggle="state.set.vOptsOpen=this.open;save()">
+      <summary>⚙ خيارات الاستماع</summary>
+      <div>
+        <button class="btn o" id="repeatWord" aria-pressed="false" onclick="toggleWordRepeat()">🔁 كرّر باستمرار</button>
+        <label class="repeat-meaning"><input type="checkbox" ${state.set.repeatMeaning?'checked':''} onchange="setRepeatMeaning(this.checked)"> مع نطق المعنى بالعربي</label>
+        <label style="display:flex;align-items:center;gap:8px">سرعة الصوت
+          <select aria-label="سرعة نطق الكلمة" onchange="changeWordRate(this.value)" style="font:inherit;padding:8px;border-radius:10px">
+            ${[0.5,0.6,0.8,1,1.25,1.5].map(r=>'<option value="'+r+'" '+(Math.abs((state.set.rate||0.8)-r)<.01?'selected':'')+'>'+r+'×</option>').join('')}
+          </select>
+        </label>
+        <button class="btn o sm" aria-pressed="${!!state.set.arabicPronunciation}" onclick="toggleArabicPronunciation()">${state.set.arabicPronunciation?'إخفاء':'إظهار'} النطق بالحروف العربية</button>
+      </div>
+    </details>
     ${w.tr ? `<div class="trick"><b>حيلة الحفظ:</b> ${w.tr}</div>` : ''}
     ${w.ex && w._S[w.ex] ? `<div class="exbox">
       <span class="lbl">مثال ${speakBtn(sentHz(w.ex, w._S))} <button class="spk" data-pron="${esc(sentHz(w.ex, w._S))}" data-py="${esc(w._S[w.ex].t.map(t=>t[1]).join(' '))}" title="قيّم نطقي">🎤</button></span>
@@ -1831,7 +1827,11 @@ function paintVocab(){
       <button class="btn o sm" onclick="vNav(-1)">◀ السابق</button>
       <button class="btn o sm" onclick="vHide={pin:!vHide.pin,mean:!vHide.mean};paintVocab()">👁 اختبر نفسك</button>
       <button class="btn o sm" onclick="vNav(1)">التالي ▶</button>
-    </div>`;
+    </div>
+    <details class="vopts" style="margin-top:12px" ${state.set.vArtOpen?'open':''} ontoggle="state.set.vArtOpen=this.open;save()">
+      <summary>🖼 صورة الحفظ وتفكيك الحرف</summary>
+      <div>${memoryPictureCard(w)}${perChar}</div>
+    </details>`;
 
   $('#vocabGrid').innerHTML = W.map(w2=>{
     const st2 = status(w2);
@@ -2280,11 +2280,14 @@ function maybeInstallHint(){
     (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
   if(standalone || !/^https?:/.test(location.protocol) || state.set.hideInstall) return;
   var ios = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  c.style.display = 'block';
-  c.innerHTML = '<div class="note b"><b>ثبّته كتطبيق على شاشتك</b>' + (ios
-    ? 'اضغط زر المشاركة <b>⬆</b> في شريط Safari بالأسفل، ثم <b>إضافة إلى الشاشة الرئيسية</b>، ثم <b>إضافة</b>. تظهر أيقونة 汉 ويفتح بملء الشاشة ويعمل بدون إنترنت.'
-    : 'من قائمة المتصفح اختر <b>تثبيت التطبيق</b> أو <b>إضافة إلى الشاشة الرئيسية</b>.')
-    + '<button class="btn o sm" style="margin-top:8px" onclick="hideInstallHint()">فهمت، أخفِ هذا</button></div>';
+  c.style.display = 'block'; c.classList.add('install-card');
+  var how = ios
+    ? 'اضغط زر المشاركة <b>⬆</b> في Safari، ثم <b>إضافة إلى الشاشة الرئيسية</b>، ثم <b>إضافة</b>.'
+    : 'من قائمة المتصفح <b>⋮</b> اختر <b>تثبيت التطبيق</b> أو <b>إضافة إلى الشاشة الرئيسية</b>.';
+  c.innerHTML = '<div class="install-bar"><span>📲 ثبّته كتطبيق على شاشتك</span>'
+    + '<button class="btn o sm" onclick="this.closest(\'.install-card\').classList.toggle(\'open\')">كيف؟</button>'
+    + '<button class="install-x" aria-label="إخفاء" onclick="hideInstallHint()">✕</button></div>'
+    + '<p class="install-how sml">' + how + ' يفتح بملء الشاشة ويعمل دون إنترنت.</p>';
 }
 function hideInstallHint(){
   state.set.hideInstall = 1; save();

@@ -8,7 +8,7 @@
   document.body.appendChild(panel);
   const log=document.getElementById('chatLog'),bar=document.getElementById('chatBar');
   panel.append(log,bar);log.setAttribute('aria-live','polite');log.setAttribute('aria-relevant','additions');
-  const fab=document.querySelector('.fab');fab.textContent='💬 المعلّم';fab.setAttribute('aria-controls','tutorPanel');fab.setAttribute('aria-expanded','false');
+  const fab=document.querySelector('.fab');fab.textContent='💬';fab.setAttribute('aria-label','المعلّم');fab.setAttribute('aria-controls','tutorPanel');fab.setAttribute('aria-expanded','false');
   let busy=false,previousFocus=null;
   const scroll=()=>{log.scrollTop=log.scrollHeight;};
   function context(){

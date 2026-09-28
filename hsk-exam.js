@@ -271,18 +271,7 @@
   }
 
   /* ---------- نقاط الدخول ---------- */
-  function entryCard(){
-    return `<div class="card hx-entry"><h2 class="sec"><b>📝</b> محاكي امتحان HSK 1</h2>
-      <p class="sml muted" style="margin:0 0 8px">٤٠ سؤالًا بنفس أقسام الامتحان الرسمي: استماع وقراءة، ودرجة من ٢٠٠.</p>
-      <button class="btn wide" onclick="openHskExam()">ابدأ الامتحان التجريبي</button></div>`;
-  }
-  function inject(){
-    const quizPage = document.getElementById('pg-quiz');
-    if(quizPage && !quizPage.querySelector('.hx-entry')) quizPage.insertAdjacentHTML('afterbegin', entryCard());
-    const list = document.getElementById('lessonList');
-    const homeCard = list && list.closest('.card');
-    if(homeCard && !document.querySelector('#pg-home .hx-entry')) homeCard.insertAdjacentHTML('beforebegin', entryCard());
-  }
-  inject();
+  // نقاط الدخول: مربّع في الرئيسية وفي صفحة الاختبار (practice.js)
+
   root.addEventListener('keydown', ev => { if(ev.key==='Escape') close(); });
 })();

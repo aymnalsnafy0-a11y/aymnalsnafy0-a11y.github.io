@@ -172,22 +172,19 @@
 
   /* ================= بطاقات الدخول ================= */
   function paintWeekCard(){
-    const home = document.getElementById('pg-home'); if(!home) return;
-    let c = document.getElementById('weekCard');
+    const t = document.getElementById('weekTile'); if(!t) return;
     const w = state.weekly || {}, dueWeek = !w.last || Date.now() - w.last >= WEEK;
     const seen = allWords().some(x => ws(wkey(x)).seen > 0);
-    if(!c){ c = document.createElement('div'); c.id = 'weekCard'; c.className = 'card'; const anchor = home.querySelector('.hx-entry') || document.getElementById('lessonList')?.closest('.card'); anchor ? anchor.before(c) : home.prepend(c); }
-    c.classList.toggle('wk-due', dueWeek && seen);
-    c.innerHTML = `<h2 class="sec"><b>🗓</b> المراجعة الأسبوعية ${dueWeek && seen ? '<span class="pill due">حان وقتها</span>' : ''}</h2>
-      <p class="sml muted" style="margin:0 0 8px">${dueWeek && seen ? 'مرّ أسبوع — راجع الكلمات التي تخطئ فيها من كل الدروس، وشاهد تقرير تقدّمك.' : 'آخر مراجعة: ' + new Date(w.last).toLocaleDateString('ar',{weekday:'long', day:'numeric', month:'short'}) + '. التقرير متاح في أي وقت.'}</p>
-      <div class="row eq"><button class="btn ${dueWeek && seen ? '' : 'o'}" onclick="openWeekly()">📊 تقريري والمراجعة</button><button class="btn o" onclick="openDictation()">🎧 الإملاء والاستماع</button></div>`;
+    t.classList.toggle('due', dueWeek && seen);
+    document.getElementById('weekTileTxt').textContent = dueWeek && seen ? 'حان وقتها!' : (w.last ? 'آخرها ' + new Date(w.last).toLocaleDateString('ar',{day:'numeric', month:'short'}) : 'تقريرك');
   }
   function paintQuizCard(){
-    const q = document.getElementById('pg-quiz'); if(!q || q.querySelector('.dict-entry')) return;
-    const c = document.createElement('div'); c.className = 'card dict-entry';
-    c.innerHTML = `<h2 class="sec"><b>🎧</b> الإملاء والاستماع</h2><p class="sml muted" style="margin:0 0 8px">تسمع فقط — ثم ترتّب الحروف، أو تكتب البينيين، أو تختار المعنى.</p>
-      <div class="row eq"><button class="btn" onclick="openDictation()">ابدأ التمرين</button><button class="btn o" onclick="openWeekly()">🗓 المراجعة الأسبوعية</button></div>`;
-    const ex = q.querySelector('.hx-entry'); ex ? ex.after(c) : q.prepend(c);
+    const q = document.getElementById('pg-quiz'); if(!q || q.querySelector('.quiz-tiles')) return;
+    const c = document.createElement('div'); c.className = 'tiles tiles3 quiz-tiles';
+    c.innerHTML = `<button class="tile" onclick="openDictation()"><i>🎧</i><b>الإملاء</b><small>درّب أذنك</small></button>
+      <button class="tile" onclick="openHskExam()"><i>📝</i><b>امتحان HSK</b><small>٤٠ سؤالًا</small></button>
+      <button class="tile" onclick="openWeekly()"><i>🗓</i><b>الأسبوعية</b><small>كل الدروس</small></button>`;
+    q.prepend(c);
   }
   const basePaintHome = paintHome;
   paintHome = function(){ basePaintHome.apply(this, arguments); try{ paintWeekCard(); }catch(_){} };

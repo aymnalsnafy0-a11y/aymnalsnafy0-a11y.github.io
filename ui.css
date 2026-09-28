@@ -1,0 +1,84 @@
+/* تبسيط الواجهة: شريط علوي بسطر واحد، رئيسية بشاشة واحدة، مربعات متساوية، وتفاصيل قابلة للطي */
+.sr-only{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+header{padding:8px 12px 9px}
+.htop{gap:8px}
+.lesson-chip{flex:1;min-width:0;display:flex;align-items:center;gap:7px;background:#ffffff1f;border:1px solid #ffffff38;color:#fff;border-radius:12px;padding:8px 11px;font:inherit;cursor:pointer;text-align:right}
+.lesson-chip .lc-txt{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:700;font-size:14.5px}
+.lesson-chip .lc-arrow{opacity:.8;font-size:12px}
+.lesson-chip:active{background:#ffffff33}
+.htop .iconbtn,#accountButton{height:40px;min-width:40px;border-radius:12px;font-size:17px;padding:0 10px}
+.bar{height:5px;margin-top:8px}
+main{padding-bottom:150px}
+
+/* البطاقة الرئيسية */
+.study-hero{padding:18px!important}
+.hero-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.hero-lbl{opacity:.8}
+.hero-lesson{display:block;font-size:18px;line-height:1.5;margin-top:2px}
+.hero-change{flex-shrink:0;background:#ffffff26;border:1px solid #ffffff55;color:#fff;border-radius:10px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer}
+.hero-goal{display:flex;justify-content:space-between;align-items:center;margin-top:14px;font-weight:700;font-size:14px}
+.hero-goal select{font:inherit;font-size:13px;border-radius:8px;border:0;padding:2px 4px;margin-inline-start:4px}
+.study-hero .goal-track{width:100%;height:8px;margin-top:6px;accent-color:#8fe3c3}
+.hero-txt{font-size:14px;margin:10px 0 12px!important;opacity:.95}
+.hero-go{font-size:17px!important;padding:14px!important;font-weight:800}
+
+/* الأرقام المختصرة */
+.mini-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 14px}
+.mini-stats>*{background:var(--card,#f4f8ff);border:1px solid var(--line,#ccdbee);border-radius:14px;padding:9px 4px;text-align:center;display:flex;flex-direction:column;gap:2px;font:inherit;color:inherit}
+.mini-stats button{cursor:pointer}
+.mini-stats u{text-decoration:none;font-size:20px;font-weight:800;color:var(--blue,#245da8)}
+.mini-stats span{font-size:11.5px;color:var(--muted,#516781)}
+
+/* المربعات */
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.tile{background:var(--card,#f4f8ff);border:1px solid var(--line,#ccdbee);border-radius:16px;padding:14px 6px 12px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;font:inherit;color:var(--ink,#172e48);min-height:98px;box-shadow:var(--sh)}
+.tile i{font-style:normal;font-size:28px;line-height:1.2}
+.tile b{font-size:14.5px}
+.tile small{font-size:11.5px;color:var(--muted,#516781);line-height:1.3}
+.tile:active{transform:scale(.97)}
+.tile.due{border-color:#f0b35a;background:#fff8ec}.tile.due small{color:#9a5b00;font-weight:700}
+.quiz-tiles{margin-bottom:14px}.quiz-tiles .tile{min-height:88px}
+
+/* التفاصيل المطوية */
+details.fold{padding:0!important;overflow:hidden}
+details.fold>summary{list-style:none;cursor:pointer;padding:15px 16px;font-weight:700;font-size:15px;display:flex;justify-content:space-between;align-items:center}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary::after{content:'▾';opacity:.6;transition:transform .2s}
+details.fold[open]>summary::after{transform:rotate(180deg)}
+details.fold>:not(summary){margin-inline:16px}
+details.fold>:last-child{margin-bottom:16px}
+
+/* قائمة الدروس المختصرة */
+#lessonSheet .lesson{display:grid;grid-template-columns:1fr auto;grid-template-areas:"t b" "m b" "p p";align-items:center;column-gap:10px;padding:11px 12px!important;margin-bottom:8px;cursor:default}
+#lessonSheet .lesson h4{grid-area:t;margin:0!important;padding-left:0!important;font-size:14.5px;line-height:1.5}
+#lessonSheet .lesson .meta{grid-area:m;font-size:12px}
+#lessonSheet .lesson .lbar{grid-area:p;margin-top:7px}
+#lessonSheet .lesson .lsel{grid-area:b;width:auto!important;margin:0!important;padding:8px 12px;font-size:13px;white-space:nowrap}
+#lessonSheet .lesson .ldel{position:static!important;grid-area:b;display:none}
+#lessonSheet.editing .lesson .ldel{display:inline-block}
+#lessonSheet.editing .lesson .lsel{display:none}
+.lesson-tools{display:flex;gap:8px;margin-top:4px}
+.lesson-tools .btn{flex:1}
+
+/* زر المعلّم: دائرة صغيرة لا تغطي المحتوى */
+.fab,body.showfab .fab{width:56px!important;height:56px!important;padding:0!important;border-radius:50%!important;font-size:24px!important;display:flex!important;align-items:center;justify-content:center;opacity:.95}
+
+/* صفحة المفردات */
+.filter-row{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 10px;margin:0 0 4px;scrollbar-width:none}
+.filter-row::-webkit-scrollbar{display:none}
+.filter-row .btn{flex-shrink:0;border-radius:20px!important;padding:7px 14px!important;font-size:13.5px!important;min-height:0!important}
+.vactions{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.vactions button{font:inherit;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px;border-radius:14px;border:1px solid var(--line,#ccdbee);background:var(--card,#f4f8ff);color:var(--blue,#245da8);cursor:pointer;font-size:12.5px;font-weight:700}
+.vactions button i{font-style:normal;font-size:22px}
+.vactions button.main{background:var(--blue,#245da8);color:#fff;border-color:var(--blue,#245da8)}
+details.vopts{border:1px solid var(--line,#ccdbee);border-radius:14px;margin-bottom:12px;background:var(--card,#f4f8ff)}
+details.vopts>summary{cursor:pointer;padding:10px 12px;font-size:13.5px;font-weight:700;color:var(--muted,#516781);list-style:none}
+details.vopts>summary::-webkit-details-marker{display:none}
+details.vopts>div{padding:0 12px 12px;display:flex;flex-direction:column;gap:10px}
+@media(max-width:380px){.tile b{font-size:13.5px}.mini-stats u{font-size:18px}}
+[hidden]{display:none!important}
+.install-card{padding:8px 12px!important;margin-bottom:12px}
+.install-bar{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700}
+.install-bar span{flex:1}
+.install-x{background:none;border:0;font-size:16px;cursor:pointer;color:var(--muted,#516781);padding:4px 6px}
+.install-how{display:none;margin:6px 0 2px}.install-card.open .install-how{display:block}
