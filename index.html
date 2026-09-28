@@ -3510,7 +3510,7 @@ function p3Json(txt){
 }
 function p3One(imgs, sys, text, useSchema, think){
   const o = { system: useSchema ? sys : (sys + JSON_HINT), images: imgs,
-    temp: 0.15, max: think ? 32000 : 16000, noThink: !think, web: false, turns: [], noRole: true, timeout: 240000 };
+    temp: 0.15, max: 16000, noThink: true, web: false, turns: [], noRole: true, timeout: 90000, deadline: 150000 };
   if(useSchema) o.schema = LESSON_SCHEMA;
   return aiCall(text, o);
 }
@@ -3541,15 +3541,9 @@ function p3Chunk(imgs, tries){
         return raw;
       }, function(){ return raw; });
     })
-    .then(function(raw){
-      return p3One(imgs, VERIFY_SYS, 'راجع هذا الاستخراج مقابل الصور وصحّحه:\n' + JSON.stringify(raw).slice(0, 40000), !p3NoSchema)
-        .then(function(r2){
-          try{ const v = p3Json(r2.text); return (v && v.words && v.words.length) ? v : raw; }catch(e){ return raw; }
-        }, function(){ return raw; });
-    })
     .catch(function(e){
-      if(e && e.code === 'quota' && (tries || 0) < 1){
-        return p3Wait(22000).then(function(){ return p3Chunk(imgs, (tries || 0) + 1); });
+      if(e && (e.code === 'abort' || e.code === 'quota') && (tries || 0) < 1){
+        return p3Wait(3000).then(function(){ return p3Chunk(imgs, (tries || 0) + 1); });
       }
       throw e;
     });
@@ -3729,10 +3723,21 @@ function photoPick(){
   if(p3Busy){ toast('جارٍ العمل على الدفعة الحالية'); return; }
   f.value = ''; f.click();
 }
+const PEND_LS = 'hsk_pending_v1';
+function pendSave(){ try{ pendPacks.length ? localStorage.setItem(PEND_LS, JSON.stringify(pendPacks)) : localStorage.removeItem(PEND_LS); }catch(e){} }
+function pendLoad(){ if(!pendPacks.length){ try{ pendPacks = JSON.parse(localStorage.getItem(PEND_LS)) || []; }catch(e){ pendPacks = []; } } return pendPacks; }
+let p3Wake = null;
+function p3KeepAwake(on){
+  try{
+    if(on && navigator.wakeLock) navigator.wakeLock.request('screen').then(function(l){ p3Wake = l; }).catch(function(){});
+    else if(!on && p3Wake){ p3Wake.release(); p3Wake = null; }
+  }catch(e){}
+}
 function photoGo(input){
   const files = Array.prototype.slice.call(input.files || []).slice(0, P3_MAXIMG);
   if(!files.length) return;
-  p3Busy = true;
+  p3Busy = true; p3KeepAwake(true);
+  const t0 = Date.now();
   const sid = 'p3s' + Date.now();
   chatAdd('u', '📷 ' + files.length + ' صفحة من الدرس');
   chatAdd('a', '<p id="' + sid + '">جارٍ تجهيز الصور…</p><div class="lbar"><i id="' + sid + 'b" style="width:4%"></i></div>'
@@ -3743,8 +3748,9 @@ function photoGo(input){
     const b = document.getElementById(sid + 'b'); if(b) b.style.width = w + '%';
     const m = (state.chat || []).find(function(x){ return x.h && x.h.indexOf('id="' + sid + '"') >= 0; });
     if(m){ m.h = '<p id="' + sid + '">' + esc(t) + '</p><div class="lbar"><i id="' + sid + 'b" style="width:' + w + '%"></i></div>'
-      + '<p class="sml muted">اتركه يعمل — قد يأخذ دقيقة إلى ثلاث دقائق، وأطول إذا كانت خوادم Google مزدحمة.</p>'; save(); }
+      + '<p class="sml muted">⏱ <span id="' + sid + 't">0</span> ث · أبقِ الشاشة مفتوحة والتطبيق ظاهرًا حتى ينتهي (عادة أقل من دقيقة).</p>'; save(); }
   }
+  const tick = setInterval(function(){ const e = document.getElementById(sid + 't'); if(e) e.textContent = Math.round((Date.now() - t0) / 1000); if(!p3Busy) clearInterval(tick); }, 1000);
   const parts = [], fails = [];
   Promise.all(files.map(function(f){ return shrinkImg(f, 1100, 0.72); }))
     .then(function(imgs){
@@ -3765,7 +3771,7 @@ function photoGo(input){
       return step();
     })
     .then(function(){
-      p3Busy = false;
+      p3Busy = false; p3KeepAwake(false);
       if(!parts.length){
         setS('تعذّرت قراءة الصفحات.', 100);
         chatAdd('a', '<p><b>لم أستطع قراءة أي صفحة.</b></p>'
@@ -3777,9 +3783,9 @@ function photoGo(input){
           + (fails.length ? '<div class="tles">تعثّرت: ' + esc(fails.join(' · ')) + '</div>' : ''));
         return;
       }
-      setS('اكتملت القراءة ✓', 100);
+      setS('اكتملت القراءة ✓ في ' + Math.round((Date.now() - t0) / 1000) + ' ثانية', 100);
       const m = p3Merge(parts);
-      pendPacks = m.packs; pendWarn = m.warn;
+      pendPacks = m.packs; pendWarn = m.warn; pendSave(); p3KeepAwake(false);
       const nw = pendPacks.reduce(function(a, l){ return a + l.words.length; }, 0);
       const ns = pendPacks.reduce(function(a, l){ return a + Object.keys(l.sents).length; }, 0);
       const np = pendPacks.reduce(function(a, l){ return a + l.patterns.length; }, 0);
@@ -3790,7 +3796,7 @@ function photoGo(input){
       openModal('mdPrev');
     })
     .catch(function(e){
-      p3Busy = false;
+      p3Busy = false; p3KeepAwake(false);
       setS('توقف العمل.', 100);
       chatAdd('a', '<p>' + esc(AI_ERRS[e && e.code] || AI_ERRS.http) + '</p>'
         + ((e && e.detail) ? '<div class="tles" dir="ltr">' + esc(e.detail) + '</div>' : ''));
@@ -3801,7 +3807,8 @@ function photoGo(input){
 function prevPaint(){
   const box = document.getElementById('prevBody');
   if(!box) return;
-  if(!pendPacks.length){ box.innerHTML = '<div class="note">لا يوجد درس قيد المعاينة.</div>'; return; }
+  pendLoad();
+  if(!pendPacks.length){ box.innerHTML = '<div class="note">لا يوجد درس قيد المعاينة. صوّر صفحات الدرس من 📘 الدروس ← ➕ إضافة درس.</div>'; return; }
   box.innerHTML = (pendWarn.length
       ? '<div class="note"><b>ملاحظات القراءة</b>' + esc(pendWarn.slice(0, 5).join(' · ')) + '</div>' : '')
     + pendPacks.map(function(L2, li){
@@ -3830,7 +3837,7 @@ function prevPaint(){
       }).join('')
     + '<div class="row eq" style="margin-top:12px">'
       + '<button class="btn g" onclick="prevInstall()">✓ ركّب الدروس</button>'
-      + '<button class="btn o r" onclick="pendPacks=[];closeModal(\'mdPrev\')">إلغاء</button>'
+      + '<button class="btn o r" onclick="pendPacks=[];pendSave();closeModal(\'mdPrev\')">إلغاء</button>'
     + '</div>';
 }
 function prevInstall(){
@@ -3865,7 +3872,7 @@ function prevInstall(){
       if(box){ box.value = JSON.stringify({ lesson: L2 }); installPack(); }
     });
     closeModal('mdPrev');
-    pendPacks = []; pendImgs = []; AIDX = null;
+    pendPacks = []; pendSave(); pendImgs = []; AIDX = null;
     if(!total){ toast('لم تختر أي كلمة'); return; }
     chatAdd('a', '<p><b>تم التركيب ✓</b> ' + titles.length + ' ' + (titles.length === 1 ? 'درس' : 'دروس') + ' و' + total + ' كلمة:</p>'
       + '<p class="sml">' + esc(titles.join(' · ')) + '</p>'
@@ -3895,6 +3902,8 @@ function boot(){
   useLesson(state.cur || 'L1');
   initVoices(); markRate(); checkStorage();
   maybeInstallHint();
+  try{ if(pendLoad().length){ const c = document.getElementById('installCard'); if(c){ c.style.display='block'; c.classList.remove('install-card');
+    c.innerHTML = '<div class="note g" style="margin:0"><b>📥 درس جاهز للمراجعة</b>قرأت صفحات «' + esc(pendPacks[0].title) + '». راجعه ثم ركّبه.<div style="margin-top:8px"><button class="btn sm" onclick="openModal(\'mdPrev\')">👁 افتح المعاينة</button></div></div>'; } } }catch(e){}
   initTutor();
   tickClock(); setInterval(tickClock, 1000);
   if('speechSynthesis' in window) setTimeout(initVoices, 700);

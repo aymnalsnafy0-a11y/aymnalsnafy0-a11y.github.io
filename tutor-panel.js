@@ -170,32 +170,69 @@
   const isDaily=e=>e&&e.code==='quota'&&(/PerDay/i.test(e.detail||'')||!/PerMinute|minute/i.test(e.detail||''));
   const retryable=e=>e&&(['model','quota','offline','abort'].includes(e.code)||/^HTTP 5\d\d/.test(e.detail||''))&&navigator.onLine!==false;
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  // النماذج المزدحمة (503/انتهاء المهلة) تُتجاوز مؤقتًا بدل الانتظار عليها
+  const busy=()=>state.set.aiBusy||(state.set.aiBusy={});
   aiCall=async function(text,opts){
     opts=Object.assign({},opts||{});
     if(opts.system==null)opts.system=tutorSystem();
     if(!opts.turns)opts.turns=aiTurns(20);
     if(opts.turns.length&&opts.turns[opts.turns.length-1].role==='u'&&opts.turns[opts.turns.length-1].text===text)opts.skipUser=true;
+    // سريع افتراضيًا: بلا «تفكير» مطوّل إلا إذا طلبته المهمة
+    if(!opts.think&&opts.noThink==null)opts.noThink=true;
+    const heavy=!!(opts.images&&opts.images.length);
+    const deadline=Date.now()+(opts.deadline||(heavy?150000:60000)), per=opts.timeout||(heavy?90000:30000);
     const avail=await modelList();
-    const lite=m=>/lite/.test(m);
-    // الأقوى أولًا، ونماذج lite في النهاية (وفي مهام السمع هي آخر حل فقط)
-    const pool=[opts.model||aiModel(),...BASE.filter(m=>avail.includes(m)),...avail.slice().sort((x,y)=>ver(y)-ver(x))]
-      .filter((m,i,arr)=>arr.indexOf(m)===i);
-    const models=pool.filter(m=>!lite(m)).concat(pool.filter(lite)).filter(m=>!spent()[m]);
+    const lite=m=>/lite/.test(m), now=Date.now();
+    const pool=[state.set.aiLastOk,opts.model||aiModel(),...BASE.filter(m=>avail.includes(m)),...avail.slice().sort((x,y)=>ver(y)-ver(x))]
+      .filter((m,i,arr)=>m&&arr.indexOf(m)===i&&(avail.includes(m)||BASE.includes(m)));
+    let models=pool.filter(m=>!lite(m)).concat(pool.filter(lite)).filter(m=>!spent()[m]);
+    const free=models.filter(m=>!(busy()[m]>now));
+    models=free.length?free:models; // إن كانت كلها مزدحمة نجرّبها رغم ذلك
     if(!models.length){const e=AIErr('quota');e.detail='daily: all models';throw e;}
-    let last;
-    for(const model of models){
-      for(let attempt=0;attempt<2;attempt++){
-        try{return await direct.call(text,Object.assign({},opts,{model}));}
-        catch(e){
-          last=e;if(!retryable(e))throw e;
-          if(e.code==='model'){spent()[model]=1;save();break;}
-          if(e.code==='quota'){if(isDaily(e)||attempt){spent()[model]=1;save();break;}await sleep(2500);continue;}
-          if(attempt)break;await sleep(1200);
+    window.__aiOrder=models;
+    // محاولة واحدة على نموذج: تعيد النتيجة أو ترمي الخطأ بعد تسجيل حالة النموذج
+    async function attempt(model){
+      const left=deadline-Date.now();
+      if(left<4000)throw AIErr('abort');
+      try{
+        let r;
+        try{r=await direct.call(text,Object.assign({},opts,{model,timeout:Math.min(per,left)}));}
+        catch(e0){
+          // بعض النماذج (مثل lite) ترفض إيقاف التفكير (400): نعيد نفس الطلب بدونه
+          if(e0&&e0.code==='http'&&/HTTP 400/.test(e0.detail||'')&&opts.noThink&&deadline-Date.now()>4000)
+            r=await direct.call(text,Object.assign({},opts,{model,noThink:false,timeout:Math.min(per,deadline-Date.now())}));
+          else throw e0;
         }
+        if(state.set.aiLastOk!==model){state.set.aiLastOk=model;save();}
+        return r;
+      }catch(e){
+        if(e&&e.code==='http'&&/HTTP 400/.test(e.detail||'')&&!/API[_ ]?key/i.test(e.detail||'')){spent()[model]=1;save();throw e;}
+        if(!retryable(e)){e.fatal=true;throw e;}
+        if(e.code==='model'){spent()[model]=1;}
+        else if(e.code==='quota'){if(isDaily(e))spent()[model]=1;else busy()[model]=Date.now()+60000;}
+        else busy()[model]=Date.now()+600000;
+        if(state.set.aiLastOk===model)state.set.aiLastOk='';
+        save();throw e;
       }
     }
-    throw last;
+    // «طلب احتياطي»: إذا تأخر النموذج الحالي نبدأ التالي معه، ونأخذ أول رد ناجح
+    const hedge=opts.hedge||(heavy?30000:7000);
+    return await new Promise((resolve,reject)=>{
+      let i=0,running=0,done=false,last=null,timer=null;
+      const finish=(ok,v)=>{if(done)return;done=true;clearTimeout(timer);ok?resolve(v):reject(v);};
+      const giveUp=()=>{if(running||done)return;if(i<models.length&&deadline-Date.now()>4000)return launch();
+        if(!last||Date.now()>=deadline-4000){const e=AIErr('abort');e.detail=last&&last.detail;return finish(false,e);}finish(false,last);};
+      function launch(){
+        if(done||i>=models.length)return giveUp();
+        const model=models[i++];running++;
+        clearTimeout(timer);timer=setTimeout(()=>{if(!done&&i<models.length&&running<2)launch();},hedge);
+        attempt(model).then(v=>finish(true,v),e=>{running--;last=e;if(e&&e.fatal)return finish(false,e);if(!done&&running<1)launch();else giveUp();});
+      }
+      launch();
+      setTimeout(()=>{if(!done){const e=AIErr('abort');e.detail=last&&last.detail;finish(false,e);}},Math.max(0,deadline-Date.now()));
+    });
   };
+  AI_ERRS.abort='خوادم Google مزدحمة الآن ولم يصل رد في الوقت المناسب. حاول بعد دقيقة.';
   AI_ERRS.quota='انتهت حصة Google المجانية لليوم في كل النماذج المتاحة لمفتاحك. تتجدّد تلقائيًا بعد منتصف الليل بتوقيت أمريكا (حوالي ١٠ صباحًا بتوقيت السعودية). تقدر تواصل الدروس والامتحان والإملاء بلا أي مشكلة.';
   aiPaint=function(){
     const st=document.getElementById('aiState');

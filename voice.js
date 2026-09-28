@@ -98,7 +98,7 @@
     const prompt = `النص المطلوب: ${P.hz}${P.py ? '\nالبينيين الصحيح: ' + P.py : ''}\n`
       + 'قيّم التسجيل: score من 0 إلى 100. heard = ما سمعته فعلًا بالبينيين بعلامات النغمة. syllables = لكل حرف: hz، expected (البينيين الصحيح)، heard (ما سمعته)، ok، وtip نصيحة عربية قصيرة جدًا إن كان خطأ (مثل: النغمة الثالثة تنزل ثم تصعد). summary = جملتان بالعربية: ما أجاده الطالب وأهم شيء يصلحه. إذا كان التسجيل صامتًا أو لا يحتوي النص فاجعل score صفرًا وقل ذلك.';
     try{
-      const r = await aiCall(prompt, {system: sys, turns: [], images: [{mime:'audio/wav', b64: a.b64}], schema: PRON_SCHEMA, temp: 0.1, max: 2500});
+      const r = await aiCall(prompt, {system: sys, turns: [], images: [{mime:'audio/wav', b64: a.b64}], schema: PRON_SCHEMA, temp: 0.1, max: 2500, timeout: 35000, deadline: 60000});
       let d; try{ d = JSON.parse(r.text); }catch(_){ throw AIErr('parse'); }
       const sc = Math.max(0, Math.min(100, Math.round(Number(d.score)||0)));
       state.pron = state.pron || {}; state.pron[P.hz] = Math.max(sc, state.pron[P.hz] || 0);
@@ -196,7 +196,7 @@
       try{
         const sys = (typeof tutorSystem === 'function' ? tutorSystem() : '') + roleSys()
           + '\nالطالب أرسل رسالة صوتية (بالعربية أو الصينية أو خليط). افهمها وأجب عنها. إذا تكلّم بالصينية: اجعل intro يبدأ بـ «سمعتك تقول:» وضع ما قاله كأول عنصر في items، وصحّح نطقه أو قواعده باختصار إن لزم. لا تستخدم Markdown.';
-        const r = await aiCall('(رسالة صوتية من الطالب — استمع إليها)', {system: sys + (window.TUTOR_BLOCK_RULES || ''), noRole: true, turns: aiTurns(12).concat([{role:'u', text:'(رسالة صوتية من الطالب — استمع إليها)'}]), skipUser: true, images: [{mime:'audio/wav', b64: a.b64}], schema: window.TUTOR_BLOCKS_SCHEMA, max: 3000});
+        const r = await aiCall('(رسالة صوتية من الطالب — استمع إليها)', {system: sys + (window.TUTOR_BLOCK_RULES || ''), noRole: true, turns: aiTurns(12).concat([{role:'u', text:'(رسالة صوتية من الطالب — استمع إليها)'}]), skipUser: true, images: [{mime:'audio/wav', b64: a.b64}], schema: window.TUTOR_BLOCKS_SCHEMA, max: 3000, timeout: 35000, deadline: 60000});
         let html; try{ html = renderBlocks(JSON.parse(r.text)); if(!html) throw 0; }catch(_){ html = chatFmt(r.text.replace(/\n\s*\n+/g, '\n').trim()); }
         typingOff(); chatAdd('a', html + (typeof aiFoot === 'function' ? aiFoot() : ''));
       }catch(err){ typingOff(); chatAdd('a', '<p>' + e((AI_ERRS && AI_ERRS[err.code]) || 'تعذّر إرسال الرسالة الصوتية.') + '</p>'); }
