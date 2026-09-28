@@ -69,10 +69,14 @@ async def main():
         fails.append((v, text))
     await asyncio.gather(*[one(*j) for j in jobs])
     print('lessons', len(lessons), 'clips', len(jobs), 'fails', len(fails), fails[:5])
+    extra_path = os.path.join(ROOT, 'lessons-extra.js')
+    extra = ('/* دروس نُشرت من التطبيق (تُبنى تلقائيًا من lessons/*.json — لا تعدّل يدويًا) */\n'
+             'window.EXTRA_LESSONS=' + json.dumps([dict(L, published=True) for L in lessons], ensure_ascii=False, separators=(',', ':')) + ';\n')
+    old_extra = open(extra_path, encoding='utf-8').read() if os.path.exists(extra_path) else ''
+    if not jobs and extra == old_extra:
+        print('nothing changed'); return
     open(idx_path, 'w', encoding='utf-8').write(src[:src.index('window.AUDIO_INDEX=')] + 'window.AUDIO_INDEX=' + json.dumps(idx, ensure_ascii=False, separators=(',', ':')) + ';\n')
-    open(os.path.join(ROOT, 'lessons-extra.js'), 'w', encoding='utf-8').write(
-        '/* دروس نُشرت من التطبيق (تُبنى تلقائيًا من lessons/*.json — لا تعدّل يدويًا) */\n'
-        'window.EXTRA_LESSONS=' + json.dumps([dict(L, published=True) for L in lessons], ensure_ascii=False, separators=(',', ':')) + ';\n')
+    open(extra_path, 'w', encoding='utf-8').write(extra)
     sw = os.path.join(ROOT, 'sw.js'); s = open(sw, encoding='utf-8').read()
     s = re.sub(r"var CACHE = 'hsk-v(\d+)'", lambda m: "var CACHE = 'hsk-v%d'" % (int(m.group(1)) + 1), s)
     open(sw, 'w', encoding='utf-8').write(s)
