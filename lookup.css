@@ -1,0 +1,19 @@
+.lk-pop{position:fixed;z-index:200;width:min(320px,calc(100vw - 16px));background:#fff;border:1px solid #c9d8ea;border-radius:16px;box-shadow:0 14px 40px #10284640;padding:14px 14px 12px;text-align:center;color:#172e48;animation:lkIn .12s ease-out}
+.lk-pop[hidden]{display:none}
+@keyframes lkIn{from{opacity:0;transform:translateY(4px)}}
+.lk-x{position:absolute;top:6px;left:8px;background:none;border:0;font-size:16px;color:#6a7d92;cursor:pointer;padding:4px 6px}
+.lk-hz{font-size:40px;line-height:1.25}
+.lk-py{font-size:19px;color:#b3261e;font-family:Arial,sans-serif;margin-top:2px}
+.lk-ar{font-size:18px;font-weight:700;margin:4px 0 2px}
+.lk-src{font-size:12.5px;color:#516781;margin-top:4px}
+.lk-note{font-size:13.5px;color:#516781;margin:6px 0 0}
+.lk-chars{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-top:6px;direction:ltr}
+.lk-ch{display:flex;flex-direction:column;align-items:center;background:#f2f6fb;border-radius:10px;padding:4px 8px;min-width:48px}
+.lk-ch b{font-size:22px}.lk-ch i{font-style:normal;font-size:12px;color:#b3261e}.lk-ch small{font-size:11px;color:#516781;direction:rtl;max-width:90px}
+.lk-acts{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:10px}
+.lk-acts button{font:inherit;font-size:13px;font-weight:700;border:1px solid #c9d8ea;background:#f4f8ff;color:#245da8;border-radius:10px;padding:7px 10px;cursor:pointer}
+.lk-acts button.main{background:#245da8;color:#fff;border-color:#245da8;flex-basis:100%}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .lk-pop{background:#16212c;color:#e6edf3;border-color:#2a3a4a}:root:not([data-theme="light"]) .lk-acts button:not(.main),:root:not([data-theme="light"]) .lk-ch{background:#1c2935;color:#cfe0f5;border-color:#2a3a4a}}
+.lk-ai:empty{display:none}.lk-ai{margin-top:6px}
+.lk-add{font:inherit;font-size:13px;font-weight:700;margin-top:8px;border:1px dashed #1f7a4d;background:#e8f5ee;color:#1f7a4d;border-radius:10px;padding:6px 10px;cursor:pointer}
+.lk-acts button:disabled{opacity:.6}
