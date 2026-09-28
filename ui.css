@@ -87,3 +87,5 @@ details.vopts>div{padding:0 12px 12px;display:flex;flex-direction:column;gap:10p
 .htop .clock b{font-size:14px}.htop .clock span{font-size:9px}
 #ttsBar{position:fixed;left:12px;right:12px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:95;background:#fff;border:1px solid var(--line,#ccdbee);border-radius:14px;padding:9px 12px;box-shadow:0 8px 24px #10284630;font-size:13.5px;max-width:520px;margin:0 auto}
 #ttsBar b{display:block;margin-bottom:6px}#ttsBar i{display:block;height:6px;background:#e8eef4;border-radius:4px;overflow:hidden}#ttsBar u{display:block;height:100%;background:#1f7a4d;text-decoration:none;transition:width .3s}
+#lessonSheet .lesson .lpub{grid-column:1 / -1;margin-top:8px;justify-self:start}
+#lessonSheet .lesson span.lpub{color:#1f7a4d;font-weight:700}

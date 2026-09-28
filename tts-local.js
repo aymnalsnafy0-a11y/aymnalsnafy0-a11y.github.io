@@ -56,7 +56,63 @@
   function packLessons(){ return (state.packs || []).map(p => p.lesson || p).map(p => LESSONS.find(l => l.id === p.id)).filter(Boolean); }
   window.LocalAudio.missing = () => { const m = missingFor(packLessons()); return m.zh.length + m.ar.length; };
 
-  /* ---------- Gemini TTS ---------- */
+  /* ---------- أصوات Microsoft العصبية (نفس أصوات الدروس الأصلية) ----------
+     خدمة «القراءة بصوت عالٍ» في Edge. غير رسمية: إن تعطّلت نرجع تلقائيًا إلى Gemini TTS. */
+  const EDGE_VOICES = { zh: { f: 'zh-CN-XiaoxiaoNeural', m: 'zh-CN-YunxiNeural' }, ar: { f: 'ar-SA-ZariyahNeural', m: 'ar-SA-HamedNeural' } };
+  const EDGE_TOKEN = '6A5AA1D4EAFF4E9FB37E23D68491D6F4', EDGE_VER = '1-143.0.3650.75';
+  // الحروف متعددة النطق وحدها: نولّدها بحرف مطابق لنطق الدرس
+  const HOMO = { '觉': '叫', '还': '孩', '教': '叫', '系': '细' };
+  const uuid = () => ([1e7]+1e3+4e3+8e3+1e11).replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+  async function gec(){
+    let s = Math.floor(Date.now() / 1000) + 11644473600; s -= s % 300;
+    const str = (BigInt(s) * 10000000n).toString() + EDGE_TOKEN;
+    const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+    return [...new Uint8Array(h)].map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+  }
+  const xmlEsc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  let edgeBroken = 0;
+  async function edgeTTS(text, voice){
+    const url = 'wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=' + EDGE_TOKEN
+      + '&ConnectionId=' + uuid().replace(/-/g, '') + '&Sec-MS-GEC=' + await gec() + '&Sec-MS-GEC-Version=' + EDGE_VER;
+    return new Promise((res, rej) => {
+      let ws; try{ ws = new WebSocket(url); }catch(e){ return rej(e); }
+      ws.binaryType = 'arraybuffer';
+      const chunks = [], ts = new Date().toString();
+      const timer = setTimeout(() => { try{ ws.close(); }catch(_){} rej(new Error('timeout')); }, 20000);
+      ws.onopen = () => {
+        ws.send('X-Timestamp:' + ts + '\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n'
+          + '{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},"outputFormat":"audio-24khz-48kbitrate-mono-mp3"}}}}\r\n');
+        ws.send('X-RequestId:' + uuid().replace(/-/g, '') + '\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:' + ts + 'Z\r\nPath:ssml\r\n\r\n'
+          + "<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='en-US'><voice name='" + voice + "'><prosody pitch='+0Hz' rate='+0%' volume='+0%'>"
+          + xmlEsc(text) + '</prosody></voice></speak>');
+      };
+      ws.onmessage = ev => {
+        if(typeof ev.data === 'string'){ if(ev.data.indexOf('Path:turn.end') >= 0){ clearTimeout(timer); ws.close(); chunks.length ? res(new Blob(chunks, { type: 'audio/mpeg' })) : rej(new Error('empty')); } return; }
+        const b = new Uint8Array(ev.data); if(b.length < 2) return;
+        const hl = (b[0] << 8) | b[1], head = new TextDecoder().decode(b.subarray(2, hl + 2));
+        if(head.indexOf('Path:audio') >= 0) chunks.push(b.subarray(hl + 2));
+      };
+      ws.onerror = () => { clearTimeout(timer); rej(new Error('ws')); };
+      ws.onclose = () => { clearTimeout(timer); };
+    });
+  }
+  async function runEdge(lang, list, g, prog){
+    let done = 0, fails = 0; const q = list.slice();
+    async function worker(){
+      while(q.length){
+        const [key, text] = q.shift();
+        const say = lang === 'ar' ? arSay(text) : (HOMO[NORM(text)] || text);
+        try{
+          const blob = await edgeTTS(say, EDGE_VOICES[lang][g]);
+          await put(lang + '|' + key, blob); MAP[lang][key] = URL.createObjectURL(blob); done++; prog(done);
+        }catch(e){ fails++; if(fails >= 3 && !done){ edgeBroken = Date.now(); throw Object.assign(new Error('edge'), { code: 'edge' }); } }
+      }
+    }
+    await Promise.all([worker(), worker(), worker(), worker()]);
+    return done;
+  }
+
+  /* ---------- Gemini TTS (احتياطي) ---------- */
   const spent = () => { const s = state.set.ttsSpent; if(!s || s.day !== today()) state.set.ttsSpent = { day: today(), m: {} }; return state.set.ttsSpent.m; };
   async function ttsCall(text, g){
     const key = typeof aiKey === 'function' ? aiKey() : '';
@@ -175,9 +231,19 @@
     const g = state.set.zhVoice === 'm' ? 'm' : 'f', ga = state.set.arVoice === 'm' ? 'm' : 'f';
     let done = 0;
     try{
-      done += await runLang('zh', miss.zh, g, n => paintBar(n, total));
+      // أولًا: نفس أصوات الدروس الأصلية (Microsoft)، ثم Gemini لما تبقّى
+      if(!edgeBroken || Date.now() - edgeBroken > 3600000){
+        try{
+          done += await runEdge('zh', miss.zh, g, n => paintBar(n, total));
+          const b0 = done; done += await runEdge('ar', miss.ar, ga, n => paintBar(b0 + n, total));
+        }catch(e){ /* الخدمة غير متاحة الآن: نكمل بـ Gemini */ }
+      }
+      const left2 = missingFor(opts.lessons || packLessons());
+      const base0 = total - left2.zh.length - left2.ar.length;
+      done = base0;
+      done += await runLang('zh', left2.zh, g, n => paintBar(base0 + n, total));
       const base = done;
-      done += await runLang('ar', miss.ar, ga, n => paintBar(base + n, total));
+      done += await runLang('ar', left2.ar, ga, n => paintBar(base + n, total));
       const left = window.LocalAudio.missing();
       paintBar(total - left, total, left ? '⚠ بقي ' + left + ' مقطعًا — سأكملها لاحقًا' : '✓ الأصوات جاهزة مثل الدروس الأصلية');
     }catch(e){
