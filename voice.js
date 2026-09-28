@@ -195,9 +195,10 @@
       typingOn();
       try{
         const sys = (typeof tutorSystem === 'function' ? tutorSystem() : '') + roleSys()
-          + '\nالطالب أرسل رسالة صوتية (بالعربية أو الصينية أو خليط). افهمها وأجب عنها. إذا تكلّم بالصينية: اكتب في أول سطر «سمعتك تقول:» ثم ما قاله بالحروف والبينيين، وصحّح نطقه أو قواعده باختصار إن لزم. لا تستخدم Markdown.';
-        const r = await aiCall('(رسالة صوتية من الطالب — استمع إليها)', {system: sys, noRole: true, turns: aiTurns(12).concat([{role:'u', text:'(رسالة صوتية من الطالب — استمع إليها)'}]), skipUser: true, images: [{mime:'audio/wav', b64: a.b64}], max: 3000});
-        typingOff(); chatAdd('a', chatFmt(r.text.replace(/\n\s*\n+/g, '\n').trim()) + (typeof aiFoot === 'function' ? aiFoot() : ''));
+          + '\nالطالب أرسل رسالة صوتية (بالعربية أو الصينية أو خليط). افهمها وأجب عنها. إذا تكلّم بالصينية: اجعل intro يبدأ بـ «سمعتك تقول:» وضع ما قاله كأول عنصر في items، وصحّح نطقه أو قواعده باختصار إن لزم. لا تستخدم Markdown.';
+        const r = await aiCall('(رسالة صوتية من الطالب — استمع إليها)', {system: sys + (window.TUTOR_BLOCK_RULES || ''), noRole: true, turns: aiTurns(12).concat([{role:'u', text:'(رسالة صوتية من الطالب — استمع إليها)'}]), skipUser: true, images: [{mime:'audio/wav', b64: a.b64}], schema: window.TUTOR_BLOCKS_SCHEMA, max: 3000});
+        let html; try{ html = renderBlocks(JSON.parse(r.text)); if(!html) throw 0; }catch(_){ html = chatFmt(r.text.replace(/\n\s*\n+/g, '\n').trim()); }
+        typingOff(); chatAdd('a', html + (typeof aiFoot === 'function' ? aiFoot() : ''));
       }catch(err){ typingOff(); chatAdd('a', '<p>' + e((AI_ERRS && AI_ERRS[err.code]) || 'تعذّر إرسال الرسالة الصوتية.') + '</p>'); }
     }
   }

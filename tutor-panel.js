@@ -236,7 +236,28 @@
   }
   aiAsk=aiCall;
   function setBusy(value){busy=value;document.getElementById('tutorClear').disabled=value;bar.querySelector('button[onclick="chatSend()"]').disabled=value;panel.querySelectorAll('[data-tutor-question]').forEach(b=>b.disabled=value);}
-  const replySchema={type:'object',required:['reply','words'],properties:{reply:{type:'string'},words:{type:'array',maxItems:3,items:MYWORD_SCHEMA}}};
+  /* الرد المقسّم: شرح عربي، بطاقات صينية (حروف ← بينيين ← معنى)، وتنبيهات — حتى لا يختلط اتجاه الكتابة */
+  const ITEMS={type:'array',items:{type:'object',required:['zh','py','ar'],properties:{zh:{type:'string',description:'الحروف الصينية فقط'},py:{type:'string',description:'البينيين بعلامات النغمة'},ar:{type:'string',description:'المعنى بالعربية'}}}};
+  const BLOCKS_PROPS={intro:{type:'string'},items:ITEMS,tips:{type:'array',items:{type:'string'}},outro:{type:'string'}};
+  window.TUTOR_BLOCKS_SCHEMA={type:'object',required:['intro','items'],properties:BLOCKS_PROPS};
+  window.TUTOR_BLOCK_RULES='\nشكل الرد (مهم جدًا): intro = شرح عربي قصير بلا جمل صينية. items = كل كلمة أو جملة صينية في عنصر مستقل: zh الحروف الصينية فقط (بلا بينيين ولا عربي)، py البينيين بعلامات النغمة، ar المعنى بالعربية. tips = تنبيهات أو قواعد أو أخطاء شائعة (جملة لكل تنبيه). outro = سؤال أو تشجيع قصير (اختياري). لا تكتب رموز 🔊 ولا Markdown.';
+  const ZH=/([一-鿿][一-鿿　-〿！，？。、]*)/g;
+  const inline=s=>esc(String(s||'').replace(/🔊/g,'')).replace(ZH,'<bdi class="hz tb-in">$1</bdi>').replace(PY_RE,m=>'<bdi class="pyx t'+tone(m)+'">'+m+'</bdi>');
+  const pyLine=p=>String(p||'').replace(/[()（）]/g,'').trim().split(/\s+/).filter(Boolean).map(x=>'<span class="pyx t'+tone(x)+'">'+esc(x)+'</span>').join(' ');
+  const onlyZh=s=>String(s||'').replace(/[^一-鿿　-〿！，？。、]/g,'').trim();
+  function zhCard(it){
+    const zh=onlyZh(it.zh); if(!zh)return it.ar?'<p class="tb-txt">'+inline(it.ar)+'</p>':'';
+    return '<div class="tb-zh"><div class="tb-row"><span class="hz tb-hz" dir="ltr">'+esc(zh)+'</span><button class="cact spk" data-a="speak" data-v="'+esc(zh)+'" aria-label="استمع">🔊</button></div>'
+      +(it.py?'<div class="tb-py" dir="ltr">'+pyLine(it.py)+'</div>':'')+(it.ar?'<div class="tb-ar">'+inline(it.ar)+'</div>':'')+'</div>';
+  }
+  window.renderBlocks=function(d){
+    if(!d)return '';
+    return (d.intro?'<p class="tb-txt">'+inline(d.intro)+'</p>':'')
+      +(d.items||[]).map(zhCard).join('')
+      +(d.tips||[]).filter(Boolean).map(x=>'<div class="tb-tip">💡 '+inline(x)+'</div>').join('')
+      +(d.outro?'<p class="tb-txt">'+inline(d.outro)+'</p>':'');
+  };
+  const replySchema={type:'object',required:['intro','items','words'],properties:Object.assign({},BLOCKS_PROPS,{words:{type:'array',maxItems:3,items:MYWORD_SCHEMA}})};
   tutorAsk=async function(question){
     const text=String(question||'').trim().slice(0,6000);if(!text)return;
     if(busy){toast('انتظر رد المعلّم أولًا');return;}
@@ -245,15 +266,16 @@
     if(!aiReady()){chatAdd('a','<p>'+esc(AI_ERRS.nokey)+'</p><div class="trow">'+actBtn('🤖 فعّل المعلّم الذكي','ai','')+'</div>'+tutorAnswer(text));setBusy(false);return;}
     typingOn();
     try{
-      const sys=tutorSystem()+'\nأجب عن أي كلمة أو ترجمة يطلبها الطالب، ولو لم تكن في الدرس. أعد JSON بالمخطط: reply يحتوي شرحك بالعربية والصينية والبينيين؛ words يحتوي فقط الكلمات الأساسية التي تشرحها في هذا الرد (حتى 3) مع بياناتها الصحيحة للحفظ. لا تضف كل كلمات الأمثلة. حقل syl نطق كل حرف على حدة. حقل tr حيلة للحفظ لا ادعاء عن أصل الحرف. يجوز words فارغًا في الأسئلة العامة. لا تقل إنك حفظت الكلمات، الطالب سيضغط زر الإضافة.';
+      const sys=tutorSystem()+'\nأجب عن أي كلمة أو ترجمة يطلبها الطالب، ولو لم تكن في الدرس. أعد JSON بالمخطط الموضّح في «شكل الرد»، وwords؛ words يحتوي فقط الكلمات الأساسية التي تشرحها في هذا الرد (حتى 3) مع بياناتها الصحيحة للحفظ. لا تضف كل كلمات الأمثلة. حقل syl نطق كل حرف على حدة. حقل tr حيلة للحفظ لا ادعاء عن أصل الحرف. يجوز words فارغًا في الأسئلة العامة. لا تقل إنك حفظت الكلمات، الطالب سيضغط زر الإضافة.'+TUTOR_BLOCK_RULES;
       const r=await aiAsk(text,{system:sys,schema:replySchema,max:4096});
       let data;try{data=JSON.parse(r.text);}catch(_){throw AIErr('parse');}
-      if(typeof data.reply!=='string'||!data.reply.trim())throw AIErr('parse');
+      const body=(data.intro||(data.items&&data.items.length))?renderBlocks(data):(typeof data.reply==='string'&&data.reply.trim()?chatFmt(data.reply.replace(/\n\s*\n+/g,'\n').trim()):'');
+      if(!body)throw AIErr('parse');
       const words=(Array.isArray(data.words)?data.words:[]).slice(0,3).map(cleanPersonalWord).filter(Boolean);
       state.tutorWordSuggestions=state.tutorWordSuggestions||{};
       for(const w of words)state.tutorWordSuggestions[w.hz]=w;
       const keys=Object.keys(state.tutorWordSuggestions);for(const key of keys.slice(0,Math.max(0,keys.length-100)))delete state.tutorWordSuggestions[key];
-      typingOff();chatAdd('a',chatFmt(data.reply.replace(/\n\s*\n+/g,'\n').trim())+aiFoot()+'<div class="trow">'+words.map(w=>actBtn((state.myWords||[]).some(x=>x.hz===w.hz)?'✓ '+w.hz+' في كلماتي':'＋ أضف '+w.hz+' إلى كلماتي','add',w.hz,'g')).join('')+'</div>');
+      typingOff();chatAdd('a',body+aiFoot()+'<div class="trow">'+words.map(w=>actBtn((state.myWords||[]).some(x=>x.hz===w.hz)?'✓ '+w.hz+' في كلماتي':'＋ أضف '+w.hz+' إلى كلماتي','add',w.hz,'g')).join('')+'</div>');
     }
     catch(e){typingOff();const available=tutorScore(text)>=70?tutorAnswer(text):'';const setup=(!SERVER&&['nokey','badkey'].includes(e.code))?actBtn('🤖 إعداد المعلّم الذكي','ai',''):'';chatAdd('a','<p>'+esc(AI_ERRS[e.code]||AI_ERRS.http)+'</p>'+(e.detail?'<p class="sml muted ltr">'+esc(e.detail)+'</p>':'')+available+'<div class="trow">'+setup+actBtn('أعد المحاولة','retry',text)+'</div>');}
     finally{setBusy(false);scroll();}
