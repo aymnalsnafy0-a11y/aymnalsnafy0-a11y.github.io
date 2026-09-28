@@ -1530,8 +1530,9 @@ if('speechSynthesis' in window) speechSynthesis.onvoiceschanged = initVoices;
 /* الأصوات العصبية المسجّلة: المفتاح الصيني بلا علامات ترقيم، والعربي نص المعنى كما هو */
 const AUDIO_NORM = s => String(s).replace(/[。，？！、,.?!；：\s…“”"'（）()]/g,'');
 function neuralSrc(lang, text, gOverride){
-  const idx = window.AUDIO_INDEX && window.AUDIO_INDEX[lang]; if(!idx || !text) return '';
-  const id = idx[lang==='zh' ? AUDIO_NORM(text) : String(text)]; if(!id) return '';
+  const idx = window.AUDIO_INDEX && window.AUDIO_INDEX[lang]; if(!text) return '';
+  const id = idx && idx[lang==='zh' ? AUDIO_NORM(text) : String(text)];
+  if(!id) return (window.LocalAudio && window.LocalAudio.src(lang, text)) || '';
   const g = gOverride || ((lang==='zh' ? state.set.zhVoice : state.set.arVoice) === 'm' ? 'm' : 'f');
   return 'audio/' + lang + '-' + g + '/' + id + '.mp3';
 }
@@ -3212,10 +3213,12 @@ function ensureStrokes(chars){
     return /[一-鿿]/.test(c) && !(window.HZ_DATA && HZ_DATA[c]) && strokeCache[c] !== 0;
   });
   if(!need.length) return Promise.resolve(0);
-  return Promise.all(need.slice(0, 12).map(fetchStroke)).then(function(res){
-    saveStrokes();
-    return res.filter(Boolean).length;
-  });
+  // كل حروف الدرس، على دفعات من 12 حتى لا نُثقل الشبكة
+  let got = 0;
+  const batches = []; for(let i = 0; i < need.length; i += 12) batches.push(need.slice(i, i + 12));
+  return batches.reduce(function(p, b){
+    return p.then(function(){ return Promise.all(b.map(fetchStroke)).then(function(res){ got += res.filter(Boolean).length; saveStrokes(); }); });
+  }, Promise.resolve()).then(function(){ return got; });
 }
 
 /* ---------- مصادر البحث ---------- */
@@ -3452,6 +3455,20 @@ function p3Chunk(imgs, tries){
     })
     .then(function(raw){
       if(!raw || !raw.words || !raw.words.length) throw AIErr('empty');
+      // فحص الجودة: إذا جاءت النصوص أو الحوار أو القواعد ناقصة (يحدث مع النماذج الأضعف وقت الازدحام) نطلبها وحدها
+      const ns = (raw.sents || []).length, nd = (raw.dialogue || []).length, np = (raw.patterns || []).length;
+      if(ns >= Math.max(8, Math.round(raw.words.length * 0.5)) && nd && np) return raw;
+      const ask2 = 'استخرجت الكلمات من هذه الصفحات. الآن استخرج فقط: كل أسطر النصوص والحوارات بالترتيب (sents + dialogue)، وجمل أمثلة القواعد، وكل نقاط القواعد (patterns). أعد words مصفوفة فارغة.';
+      return p3One(imgs, EXTRACT_SYS, ask2, !p3NoSchema, true).then(function(r2){
+        let x; try{ x = p3Json(r2.text); }catch(e){ return raw; }
+        if((x.sents || []).length > ns){ raw.sents = x.sents; raw.dialogue = (x.dialogue || []).length ? x.dialogue : raw.dialogue; }
+        if((x.patterns || []).length > np) raw.patterns = x.patterns;
+        // ربط أمثلة الكلمات بالجمل الجديدة
+        raw.words.forEach(function(w){ if(!(raw.sents || []).some(function(s){ return s.k === w.ex; })){ const hit = (raw.sents || []).find(function(s){ return String(s.zh || (s.t || []).map(function(t){ return t.hz; }).join('')).indexOf(w.hz) >= 0; }); w.ex = hit ? hit.k : ''; } });
+        return raw;
+      }, function(){ return raw; });
+    })
+    .then(function(raw){
       return p3One(imgs, VERIFY_SYS, 'راجع هذا الاستخراج مقابل الصور وصحّحه:\n' + JSON.stringify(raw).slice(0, 40000), !p3NoSchema)
         .then(function(r2){
           try{ const v = p3Json(r2.text); return (v && v.words && v.words.length) ? v : raw; }catch(e){ return raw; }
@@ -3475,8 +3492,10 @@ function nextLessonId(taken){
 }
 function validatePack(raw, taken){
   const warn = [];
-  const out = { id: nextLessonId(taken), title: String((raw && raw.title) || 'درس جديد').slice(0, 60),
-    tag: 'من الصور', groups: {}, sents: {}, words: [], patterns: [], dialogue: [] };
+  const num = LESSONS.filter(function(l){ return !/^X|^LX$/.test(l.id); }).length + (taken || []).length + 1;
+  const t0 = String((raw && raw.title) || 'درس جديد').replace(/^\s*الدرس\s*[0-9٠-٩]+\s*[:：-]\s*/, '').slice(0, 60);
+  const out = { id: nextLessonId(taken), title: 'الدرس ' + num + ': ' + t0,
+    tag: 'دروس الكتاب', groups: {}, sents: {}, words: [], patterns: [], dialogue: [] };
 
   (raw && raw.groups || []).forEach(function(g){
     const n = parseInt(g && g.n, 10);
@@ -3817,6 +3836,7 @@ try{ boot(); }catch(e){ if(window.__fatal) window.__fatal('boot: ' + (e && e.mes
 <script src="voice.js"></script>
 <script src="practice.js"></script>
 <script src="lookup.js"></script>
+<script src="tts-local.js"></script>
 <script>
 if("serviceWorker" in navigator){
   var hadController = !!navigator.serviceWorker.controller;
