@@ -82,3 +82,6 @@ details.vopts>div{padding:0 12px 12px;display:flex;flex-direction:column;gap:10p
 .install-bar span{flex:1}
 .install-x{background:none;border:0;font-size:16px;cursor:pointer;color:var(--muted,#516781);padding:4px 6px}
 .install-how{display:none;margin:6px 0 2px}.install-card.open .install-how{display:block}
+/* ساعة مكة في الشريط العلوي */
+.htop .clock{height:40px;display:flex;flex-direction:column;justify-content:center;border-radius:12px;padding:0 8px;min-width:0;flex:0 0 auto}
+.htop .clock b{font-size:14px}.htop .clock span{font-size:9px}
