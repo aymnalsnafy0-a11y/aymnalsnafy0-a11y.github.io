@@ -1,7 +1,7 @@
 /* المعلّم بشكل شخصية: صورة كاملة في زاوية الشاشة، تتغيّر تعابيرها وتطلع منه رسائل تشجيع وتوضيح */
 (function(){
   'use strict';
-  const IMG = {idle: 'tutor/idle.webp', good: 'tutor/clap.webp', hi: 'tutor/smile.webp', info: 'tutor/smile.webp', bad: 'tutor/think.webp'};
+  const IMG = {full: 'tutor/toon.webp', mini: 'tutor/toon-face.webp'};
   Object.values(IMG).forEach(src => { const i = new Image(); i.src = src; });   // تحميل مسبق
 
   const GOOD = ['أحسنت! 👏', 'ممتاز، كمّل كذا! 💪', 'برافو عليك 🎉', 'صح! أنت تتقدّم بسرعة', '很好 hěn hǎo — ممتاز!', 'إجابة ذكية 👌', 'هذا هو! 🔥'];
@@ -12,7 +12,10 @@
 
   let fab, img, bubble, hideT, backT, streak = 0, lastAt = 0, quiet = 0;
   const mute = (fn, self, args) => { quiet++; try{ return fn.apply(self, args); } finally { quiet--; } };
-  const on = () => !(typeof state !== 'undefined' && state.set && state.set.avatarOff);
+  // الوضع: full = الشخصية كاملة، mini = وجه صغير، off = زر 💬 عادي
+  const mode = () => { if(typeof state === 'undefined' || !state.set) return 'full'; if(state.set.avatarOff){ state.set.avatarMode = 'off'; delete state.set.avatarOff; } return state.set.avatarMode || 'full'; };
+  const on = () => mode() !== 'off';
+  const talk = () => on() && !(typeof state !== 'undefined' && state.set && state.set.avatarQuiet);
 
   function build(){
     fab = document.querySelector('.fab'); if(!fab) return false;
@@ -22,19 +25,24 @@
     apply();
     return true;
   }
+  function setMode(m){ state.set.avatarMode = m; save(); apply(); paintSet(); }
   function apply(){
     if(!fab) return;
-    if(on()){
-      fab.classList.add('av-fab');
-      fab.textContent = '';
-      img = document.createElement('img'); img.alt = 'المعلّم'; img.src = IMG.idle; img.draggable = false;
-      fab.appendChild(img);
-      fab.title = 'اضغط لتسأل المعلّم · اسحبني لأي مكان';
-      img.addEventListener('load', () => window.dispatchEvent(new Event('resize')), {once: true});
-    } else {
-      fab.classList.remove('av-fab', 'av-bust'); fab.textContent = '💬'; img = null; hide();
-      window.dispatchEvent(new Event('resize'));
-    }
+    const m = mode();
+    fab.classList.remove('av-fab', 'av-full', 'av-mini');
+    img = null; fab.textContent = '';
+    if(m === 'off'){ fab.textContent = '💬'; hide(); window.dispatchEvent(new Event('resize')); return; }
+    fab.classList.add('av-fab', 'av-' + m);
+    img = document.createElement('img'); img.alt = 'المعلّم'; img.src = IMG[m]; img.draggable = false;
+    fab.appendChild(img);
+    // زر التصغير/التكبير فوق الشخصية
+    const t = document.createElement('span'); t.className = 'av-tog'; t.setAttribute('role', 'button');
+    t.title = m === 'full' ? 'تصغير المعلّم' : 'إظهار المعلّم كاملًا'; t.textContent = m === 'full' ? '–' : '+';
+    ['pointerdown', 'pointerup', 'mousedown', 'touchstart'].forEach(ev => t.addEventListener(ev, e => e.stopPropagation(), {passive: true}));
+    t.addEventListener('click', e => { e.stopPropagation(); e.preventDefault(); setMode(m === 'full' ? 'mini' : 'full'); if(m === 'full') toast('صغّرت المعلّم — اضغط + لإرجاعه، أو ⚙ لإخفائه تمامًا'); });
+    fab.appendChild(t);
+    fab.title = 'اضغط لتسأل المعلّم · اسحبني لأي مكان';
+    img.addEventListener('load', () => window.dispatchEvent(new Event('resize')), {once: true});
   }
   function place(){
     if(bubble.hidden) return;
@@ -53,15 +61,14 @@
   function face(kind, ms){
     if(!img) return;
     clearTimeout(backT);
-    img.src = IMG[kind] || IMG.idle;
-    fab.classList.toggle('av-bust', kind !== 'idle');
-    fab.classList.remove('av-pop'); void fab.offsetWidth; fab.classList.add('av-pop');
-    backT = setTimeout(() => { if(img){ img.src = IMG.idle; fab.classList.remove('av-bust'); } }, ms);
+    fab.classList.remove('av-good', 'av-bad', 'av-hi', 'av-info'); void fab.offsetWidth;
+    fab.classList.add('av-' + kind);
+    backT = setTimeout(() => fab.classList.remove('av-' + kind), 1600);
   }
   // kind: good | bad | info | hi
   function say(kind, html, opts){
     opts = opts || {};
-    if(!on() || !fab || !bubble) return;
+    if(!talk() || !fab || !bubble) return;
     const t = Date.now();
     if(!opts.force && t - lastAt < 900) return;   // لا نغرق الشاشة بالرسائل
     lastAt = t;
@@ -187,20 +194,23 @@
   }
 
   /* ---------- إعداد التشغيل والإيقاف ---------- */
+  let paintSet = () => {};
   function settings(){
     const set = document.querySelector('#mdSet .sheet'); if(!set || document.getElementById('avRow')) return;
     const anchor = [...set.querySelectorAll('p')].find(p => p.textContent.includes('المعلّم الذكي'));
     const box = document.createElement('div'); box.id = 'avRow';
     box.innerHTML = `<p style="margin:2px 0 4px"><b>شكل المعلّم</b> <span class="sml muted">(الشخصية تشجّعك وتوضّح أخطاءك)</span></p>
-      <div class="row eq" style="margin-bottom:12px"><button class="btn sm" data-av="1">🧑‍🏫 الشخصية</button><button class="btn o sm" data-av="0">💬 زر صغير</button></div>`;
+      <div class="row eq" style="margin-bottom:6px"><button class="btn sm" data-av="full">🧑‍🏫 كامل</button><button class="btn o sm" data-av="mini">🙂 وجه صغير</button><button class="btn o sm" data-av="off">🙈 إخفاء</button></div>
+      <label class="sml" style="display:flex;gap:8px;align-items:center;margin-bottom:12px"><input type="checkbox" id="avQuiet"> إيقاف رسائل التشجيع والتصحيح</label>`;
     anchor ? set.insertBefore(box, anchor) : set.appendChild(box);
-    const paint = () => box.querySelectorAll('[data-av]').forEach(b => b.classList.toggle('o', (b.dataset.av === '1') !== on()));
+    paintSet = () => { box.querySelectorAll('[data-av]').forEach(b => b.classList.toggle('o', b.dataset.av !== mode())); box.querySelector('#avQuiet').checked = !!state.set.avatarQuiet; };
     box.addEventListener('click', ev => {
       const b = ev.target.closest('[data-av]'); if(!b) return;
-      state.set.avatarOff = b.dataset.av !== '1'; save(); apply(); paint();
+      setMode(b.dataset.av);
       if(on()) say('hi', '<b>أهلًا! رجعت 👋</b>', {force: true});
     });
-    paint();
+    box.querySelector('#avQuiet').onchange = e => { state.set.avatarQuiet = e.target.checked; save(); if(e.target.checked) hide(); };
+    paintSet();
   }
 
   function init(){
