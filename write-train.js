@@ -254,9 +254,6 @@
     if(hw && !$id('wtPanel')){
       const p = document.createElement('div'); p.id = 'wtPanel'; p.className = 'wt-panel'; p.hidden = true;
       hw.parentNode.insertBefore(p, hw);
-      const row = document.createElement('div'); row.className = 'row eq'; row.style.marginTop = '7px';
-      row.innerHTML = `<button class="btn sm" style="background:#8a3ffc" onclick="wtStart()">🎯 جلسة حفظ بمؤقت</button><button class="btn o sm" onclick="wtRecall()">🧠 اكتب من الذاكرة</button>`;
-      const legend = $id('wrLegend'); legend.parentNode.insertBefore(row, legend);
       const tips = document.createElement('details'); tips.className = 'vopts wt-tips';
       tips.innerHTML = `<summary>💡 كيف تحفظ الكتابة ولا تنساها</summary><ol>
         <li><b>قسّم الرمز لأجزاء:</b> افتح «صورة الحفظ وتفكيك الحرف» في بطاقة الكلمة، واحفظ الأجزاء لا الخطوط.</li>
