@@ -221,7 +221,7 @@
     if(typeof state === 'undefined' || !document.querySelector('.fab') || typeof resolveQ !== 'function') return setTimeout(init, 200);
     if(!build()) return;
     hooks(); settings();
-    window.tutorSay = say;
+    window.tutorSay = say; window.tutorGood = good; window.tutorBad = bad;
     if(on() && !sessionStorage.getItem('avHi')){
       try{ sessionStorage.setItem('avHi', '1'); }catch(e){}
       setTimeout(() => say('hi', '<b>أهلًا! أنا معلّمك 👋</b><small>بشجّعك وأوضّح لك أخطاءك. اضغط عليّ لأي سؤال، واسحبني لأي مكان.</small>', {force: true, ms: 7000}), 1600);
