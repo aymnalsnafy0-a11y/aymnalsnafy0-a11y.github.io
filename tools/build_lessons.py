@@ -80,6 +80,10 @@ async def main():
     sw = os.path.join(ROOT, 'sw.js'); s = open(sw, encoding='utf-8').read()
     s = re.sub(r"var CACHE = 'hsk-v(\d+)'", lambda m: "var CACHE = 'hsk-v%d'" % (int(m.group(1)) + 1), s)
     open(sw, 'w', encoding='utf-8').write(s)
+    # رقم نسخة ملفّي الدروس والصوت في الصفحة حتى لا يبقى المتصفح على نسخة قديمة
+    ih = os.path.join(ROOT, 'index.html'); h = open(ih, encoding='utf-8').read()
+    h = re.sub(r'((?:audio-index|lessons-extra)\.js)\?v=[\w]+', lambda m: m.group(1) + '?v=b%d' % int(__import__('time').time()), h)
+    open(ih, 'w', encoding='utf-8').write(h)
     if fails: sys.exit(1)
 
 asyncio.run(main())

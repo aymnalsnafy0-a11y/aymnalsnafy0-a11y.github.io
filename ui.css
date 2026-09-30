@@ -110,3 +110,27 @@ details.vopts>div{padding:0 12px 12px;display:flex;flex-direction:column;gap:10p
 .st-box{display:flex;justify-content:center}
 .st-q{background:#fff;border:1px solid var(--line,#ccdbee);border-radius:14px;touch-action:none;overflow:hidden}
 .st-msg{text-align:center;font-size:13.5px;font-weight:700;min-height:22px;margin:8px 0}
+/* جلسة الحفظ والمراجعة */
+.wt-panel{background:#fff;border:1px solid var(--line,#ccdbee);border-radius:14px;padding:9px 11px;margin-bottom:9px}
+.wt-panel[hidden]{display:none}
+.wt-top{display:flex;align-items:center;gap:8px}
+.wt-top .hz{font-size:24px;font-weight:700}
+.wt-lv{border-radius:999px;padding:2px 9px;font-size:12px;font-weight:700;color:#fff}
+.wt-l0{background:#2e9d5b}.wt-l1{background:#1f6fd1}.wt-l2{background:#e07a10}.wt-l3{background:#c62828}
+.wt-time{flex:1;text-align:center;font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;direction:ltr}
+.wt-time.low{color:#e07a10}.wt-time.over{color:#c62828}
+.wt-bar{height:6px;border-radius:6px;background:#e6eef8;overflow:hidden;margin:6px 0}
+.wt-bar i{display:block;height:100%;background:linear-gradient(90deg,#8a3ffc,#1f6fd1);transition:width 1s linear}
+.wt-reps{display:flex;gap:5px;justify-content:center;flex-wrap:wrap}
+.wt-reps b{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;background:#eef3fa;color:#6b7c93}
+.wt-reps b.ok{background:#15795e;color:#fff}.wt-reps b.cur{outline:2px solid #8a3ffc;color:#8a3ffc}
+.wt-stage{text-align:center;font-size:12.5px;color:#6b7c93;margin-top:5px}
+.wt-done{text-align:center;line-height:1.9;font-size:14px}
+.wt-tips ol{margin:6px 0 0;padding-inline-start:20px;font-size:13px;line-height:1.8}
+.tile.wt-due{outline:2px solid #e07a10}
+.rc-top{text-align:center;font-size:12.5px;color:#6b7c93}
+.rc-q{text-align:center;margin:6px 0 10px}
+.rc-m{font-size:20px;font-weight:800}
+.rc-py{font-size:16px;color:#1f6fd1;margin:3px 0 6px}
+.rc-boxes{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.rc-box{background:#fff;border:1px solid var(--line,#ccdbee);border-radius:14px;touch-action:none;overflow:hidden}

@@ -28,7 +28,7 @@ jobs:
         run: |
           git config user.name "lesson-builder"
           git config user.email "lesson-builder@users.noreply.github.com"
-          git add audio audio-index.js lessons-extra.js sw.js
+          git add audio audio-index.js lessons-extra.js sw.js index.html
           git diff --cached --quiet && exit 0
           git commit -m "بناء الدروس المنشورة: أصوات وقائمة الدروس"
           git push

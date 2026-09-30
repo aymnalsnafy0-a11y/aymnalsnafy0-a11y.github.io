@@ -166,7 +166,7 @@
   // ينشئ طبقة SVG ملوّنة لحرف؛ strokeIdx اختياري لعرض خط واحد فقط
   function buildLayer(ch, data, opts){
     opts = opts || {};
-    const svg = mk('svg', {viewBox: '0 0 1024 1024', class: 'st-layer'});
+    const svg = mk('svg', {viewBox: '0 0 1024 1024', class: 'st-layer', style: 'position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none'});
     const g = mk('g', {transform: 'translate(0, 900) scale(1, -1)'});
     svg.appendChild(g);
     const id = 'st' + (++uid);
@@ -179,7 +179,7 @@
       const m = data.medians[i], L = medLen(m) + 40;
       const anim = mk('path', {d: medPath(m), fill: 'none', stroke: col, 'stroke-width': 180, 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
         'clip-path': 'url(#' + id + '_' + i + ')', 'stroke-dasharray': L + ' ' + L, 'stroke-dashoffset': L});
-      const hit = mk('path', {d, fill: 'transparent', class: 'st-hit'});
+      const hit = mk('path', {d, fill: 'transparent', class: 'st-hit', style: 'pointer-events:all;cursor:pointer'});
       g.appendChild(anim); g.appendChild(hit);
       const it = {i, inf, col, anim, hit, L, shown: false};
       hit.addEventListener('contextmenu', ev => { ev.preventDefault(); ev.stopPropagation(); if(opts.onPick) opts.onPick(ch, data, it); });
@@ -304,6 +304,7 @@
     legend();
   }
   function setLayers(visible){ layers.forEach(l => l.L.svg.style.display = visible ? '' : 'none'); }
+  window.StrokeTypes.layers = setLayers;
   function hideWriterChars(){ ((typeof wrEntries !== "undefined" ? wrEntries : [])).forEach(e => { if(e.writer) e.writer.hideCharacter({duration: 0}); }); }
   const msg = t => { const m = document.getElementById('wrMsg'); if(m) m.innerHTML = t; };
   const label = x => `<span class="hz">${x.ch}</span> · الخطوة ${x.it.i + 1}: <span style="color:${x.it.col}"><span class="hz">${x.it.inf.zh}</span> <span dir="ltr">${x.it.inf.py}</span></span> — ${x.it.inf.ar}`;
