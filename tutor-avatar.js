@@ -10,7 +10,8 @@
   const pick = a => a[Math.floor(Math.random() * a.length)];
   const strip = h => { const d = document.createElement('div'); d.innerHTML = h; return (d.textContent || '').replace(/\s+/g, ' ').trim(); };
 
-  let fab, img, bubble, hideT, backT, streak = 0, lastAt = 0;
+  let fab, img, bubble, hideT, backT, streak = 0, lastAt = 0, quiet = 0;
+  const mute = (fn, self, args) => { quiet++; try{ return fn.apply(self, args); } finally { quiet--; } };
   const on = () => !(typeof state !== 'undefined' && state.set && state.set.avatarOff);
 
   function build(){
@@ -89,7 +90,7 @@
       const base = resolveQ;
       resolveQ = window.resolveQ = function(ok, expl){
         const q = quiz.qs[quiz.i], was = q && q.answered;
-        const r = base.apply(this, arguments);
+        const r = mute(base, this, arguments);
         if(q && !was){ ok ? good() : bad('الصحيح: ' + strip(expl)); }
         return r;
       };
@@ -100,6 +101,44 @@
         const s = quiz.score, t = quiz.qs.length, r = base.apply(this, arguments);
         const pct = t ? Math.round(s / t * 100) : 0;
         setTimeout(() => say(pct >= 70 ? 'good' : 'info', pct >= 90 ? `<b>${s}/${t} — أنت جاهز للدرس الجاي 🎉</b>` : pct >= 70 ? `<b>${s}/${t} — ممتاز!</b><small>راجع الأخطاء القليلة وتصير كامل</small>` : `<b>${s}/${t}</b><small>لا تحبط، راجع الكلمات اللي غلطت فيها وأعد الاختبار — أنا معك 💪</small>`, {force: true, ms: 7000}), 300);
+        return r;
+      };
+    }
+    // ترتيب الجملة في صفحة القواعد
+    if(typeof checkOrder === 'function'){
+      const base = checkOrder;
+      checkOrder = window.checkOrder = function(pid, sk){
+        let built = null, right = null;
+        try{
+          if(ORD[pid].length >= S[sk].t.length){
+            built = ORD[pid].map(j => S[sk].t[j][0]); right = S[sk].t.map(t => t[0]);
+          }
+        }catch(e){}
+        const r = mute(base, this, arguments);
+        if(built){
+          if(built.join('|') === right.join('|')) good('<span class="hz">' + right.join('') + '</span>');
+          else {
+            const pat = (typeof PATTERNS !== 'undefined' && PATTERNS || []).find(p => p.id === pid || p.drill === sk);
+            let where = built.findIndex((w, i) => w !== right[i]);
+            bad('الصحيح: <bdi dir="ltr" class="hz">' + right.join(' ') + '</bdi>'
+              + (where >= 0 ? '<br>أول خطأ: الكلمة رقم ' + (where + 1) + ' لازم تكون <span class="hz">' + right[where] + '</span>' : '')
+              + (pat && pat.f ? '<br>القاعدة: ' + pat.f : '<br>تذكّر: الفاعل ثم الفعل ثم الباقي'));
+          }
+        }
+        return r;
+      };
+    }
+    // أي رسالة صح/خطأ أخرى في التطبيق
+    if(typeof toast === 'function'){
+      const base = toast;
+      toast = window.toast = function(m){
+        const r = base.apply(this, arguments);
+        if(quiet) return r;
+        try{
+          const t = String(m || '');
+          if(/^✓\s*(صحيح|أحسنت|ممتاز)/.test(t)) good();
+          else if(/غير صحيح|^✗|خطأ —/.test(t)) bad(t.replace(/^✗\s*/, ''));
+        }catch(e){}
         return r;
       };
     }
