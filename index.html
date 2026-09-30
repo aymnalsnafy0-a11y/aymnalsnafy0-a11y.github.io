@@ -556,9 +556,10 @@
       <button class="btn sm g" onclick="wrQuiz()">🖐 اكتبها بإصبعك</button>
     </div>
     <div class="row eq" style="margin-top:7px">
-      <button class="btn o sm" onclick="wrLoop()">🔁 خطوة بخطوة (بطيء)</button>
+      <button class="btn o sm" onclick="wrStep()">⏭ خطوة واحدة</button>
       <button class="btn o sm" onclick="wrOutline()">👁 إظهار/إخفاء الشكل</button>
     </div>
+    <div id="wrLegend" class="st-legend"></div>
     <div class="note" style="margin-top:10px" id="wrHint"></div>
   </div>
 </div>
@@ -3920,6 +3921,8 @@ try{ boot(); }catch(e){ if(window.__fatal) window.__fatal('boot: ' + (e && e.mes
 <script src="practice.js"></script>
 <script src="lookup.js"></script>
 <script src="tts-local.js"></script>
+<script src="stroke-order.js"></script>
+<script src="strokes.js"></script>
 <script>
 if("serviceWorker" in navigator){
   var hadController = !!navigator.serviceWorker.controller;
