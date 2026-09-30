@@ -80,13 +80,15 @@
     face(kind, ms);
     clearTimeout(hideT); hideT = setTimeout(hide, ms);
   }
+  const sfx = n => { try{ window.SFX && SFX.play(n); }catch(e){} };
   function good(extra){
     streak++;
+    sfx(streak >= 3 && streak % 3 === 0 ? 'streak' : 'good');
     const base = streak >= 3 && streak % 3 === 0 ? pick(STREAK) : pick(GOOD);
     say('good', base + (extra ? '<small>' + extra + '</small>' : ''));
   }
   function bad(explain){
-    streak = 0;
+    streak = 0; sfx('bad');
     say('bad', '<b>' + pick(BAD) + '</b>' + (explain ? '<small>' + explain + '</small>' : ''), {force: true});
   }
 
@@ -107,6 +109,7 @@
       quizDone = window.quizDone = function(){
         const s = quiz.score, t = quiz.qs.length, r = base.apply(this, arguments);
         const pct = t ? Math.round(s / t * 100) : 0;
+        sfx(pct >= 70 ? 'finish' : 'fail');
         setTimeout(() => say(pct >= 70 ? 'good' : 'info', pct >= 90 ? `<b>${s}/${t} — أنت جاهز للدرس الجاي 🎉</b>` : pct >= 70 ? `<b>${s}/${t} — ممتاز!</b><small>راجع الأخطاء القليلة وتصير كامل</small>` : `<b>${s}/${t}</b><small>لا تحبط، راجع الكلمات اللي غلطت فيها وأعد الاختبار — أنا معك 💪</small>`, {force: true, ms: 7000}), 300);
         return r;
       };
@@ -163,7 +166,8 @@
         w.quiz = function(o){
           o = o || {}; const om = o.onMistake, oc = o.onComplete; let warned = -1;
           return quiz(Object.assign({}, o, {
-            onMistake(d){ try{ if(d.mistakesOnStroke === 2 && warned !== d.strokeNum){ warned = d.strokeNum; say('bad', '<b>انتبه لاتجاه الخط 👀</b><small>الخط رقم ' + (d.strokeNum + 1) + ' — ابدأه من المكان الصحيح، والتلميح بيطلع لك</small>'); } }catch(e){} return om && om.apply(this, arguments); },
+            onCorrectStroke(){ sfx('stroke'); return o.onCorrectStroke && o.onCorrectStroke.apply(this, arguments); },
+            onMistake(d){ try{ if(d.mistakesOnStroke === 2 && warned !== d.strokeNum){ sfx('bad'); warned = d.strokeNum; say('bad', '<b>انتبه لاتجاه الخط 👀</b><small>الخط رقم ' + (d.strokeNum + 1) + ' — ابدأه من المكان الصحيح، والتلميح بيطلع لك</small>'); } }catch(e){} return om && om.apply(this, arguments); },
             onComplete(d){ try{ d.totalMistakes === 0 ? good('كتبته بدون ولا غلطة') : say('info', '<b>كتبته ✓</b><small>عندك ' + d.totalMistakes + ' أخطاء — المرة الجاية بدونها 💪</small>'); }catch(e){} return oc && oc.apply(this, arguments); }
           }));
         };

@@ -138,6 +138,7 @@
   }
   function finish(run){
     if(S !== run) return;
+    try{ window.SFX && SFX.play('finish'); }catch(e){}
     clearInterval(run.tick);
     const used = Math.round((now() - run.t0) / 1000);
     const inTime = used <= run.secs;
