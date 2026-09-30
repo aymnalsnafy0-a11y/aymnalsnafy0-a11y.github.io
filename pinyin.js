@@ -2,7 +2,7 @@
 (function(){
   'use strict';
   const SYL = window.PY_SYL || {};                 // 'tian1': '天'
-  const has = s => !!SYL[s];
+  const has = s => Object.prototype.hasOwnProperty.call(SYL, s);   // القيمة '' = نغمة بلا حرف شائع (صوت مولّد من نفس المقطع)
   const bases = new Set(Object.keys(SYL).map(s => s.slice(0, -1)));
   const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
