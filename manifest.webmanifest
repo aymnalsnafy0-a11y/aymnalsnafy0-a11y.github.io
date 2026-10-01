@@ -1,6 +1,6 @@
 {
-  "name": "دروس الصينية التفاعلية",
-  "short_name": "الصينية",
+  "name": "الصينية بالعربي",
+  "short_name": "الصينية بالعربي",
   "lang": "ar",
   "dir": "rtl",
   "start_url": "./index.html",
@@ -10,7 +10,28 @@
   "background_color": "#f2f6fa",
   "theme_color": "#1f5f9e",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "id": "./",
+  "description": "تعلّم الصينية (HSK1) بالعربي: مفردات بالصوت، البينيين والنغمات بتسجيلات بشرية، كتابة الحروف خطوة بخطوة، اختبارات، ومعلّم ذكي.",
+  "categories": [
+    "education"
   ]
 }
