@@ -248,3 +248,5 @@ body.py-open{overflow:hidden}
 .py-ans{font-size:22px;font-weight:700}
 .py-done{text-align:center}.py-bigsc{font-size:48px;font-weight:800;color:#1f5f9e}
 @media (max-width:380px){.py-card b{font-size:23px}.py-grid{gap:7px}}
+.py-credit{font-size:11px;color:#6b7c93;text-align:center;padding:6px 10px calc(6px + env(safe-area-inset-bottom));background:#f4f6fa;border-top:1px solid #e3e9f2}
+.py-credit a{color:#1f5f9e}

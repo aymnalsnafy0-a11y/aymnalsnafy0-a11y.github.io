@@ -64,7 +64,7 @@
   function play(s, rate){
     if(!s || !has(s)) return Promise.resolve();
     try{ if(audio){ audio.pause(); } }catch(e){}
-    audio = new Audio('audio/py/' + s.replace(/ü/g, 'v') + '.mp3?v=2');
+    audio = new Audio('audio/py/' + s.replace(/ü/g, 'v') + '.mp3?v=3');
     audio.playbackRate = rate || 1;
     return new Promise(res => { audio.onended = res; audio.onerror = res; audio.play().catch(res); });
   }
@@ -81,7 +81,8 @@
         <button data-t="ini">الحروف الأولى<small>声母</small></button><button data-t="fin">النهايات<small>韵母</small></button>
         <button data-t="tone">النغمات<small>声调</small></button><button data-t="chart">جدول المقاطع<small>拼读</small></button>
         <button data-t="drill">تدريبات<small>练习</small></button></div>
-      <main></main>`;
+      <main></main>
+      <footer class="py-credit">🎙 تسجيلات بشرية: Chen Wang عبر <a href="https://github.com/hugolpz/audio-cmn" target="_blank" rel="noopener">audio-cmn</a> (CC BY-SA) و<a href="https://github.com/davinfifield/mp3-chinese-pinyin-sound" target="_blank" rel="noopener">mp3-chinese-pinyin-sound</a></footer>`;
     document.body.appendChild(root);
     body = root.querySelector('main'); tabsEl = root.querySelector('.py-tabs');
     root.querySelector('.py-back').onclick = close;
