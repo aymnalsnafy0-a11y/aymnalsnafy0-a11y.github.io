@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>فحص الموقع</title>
+<style>
+  body{font-family:Tahoma,Arial,sans-serif;background:#f2f6fa;color:#16202c;margin:0;padding:16px;line-height:1.8}
+  h1{font-size:20px;color:#1f5f9e;margin:0 0 8px}
+  .row{background:#fff;border:1px solid #dde5ed;border-radius:12px;padding:10px 12px;margin:8px 0;font-size:14px}
+  .ok{color:#15795e;font-weight:bold}.no{color:#a8393c;font-weight:bold}
+  button{font:inherit;font-size:16px;font-weight:bold;border:0;border-radius:12px;padding:12px;width:100%;margin:6px 0;color:#fff;background:#1f5f9e}
+  button.r{background:#a8393c}
+  .ua{direction:ltr;text-align:left;font-size:11px;word-break:break-all;color:#5b6b7c}
+</style>
+</head>
+<body>
+<h1>🔧 فحص موقع دروس الصينية</h1>
+<p>خذ لقطة شاشة لهذه الصفحة وأرسلها، ثم جرّب زر «إصلاح وفتح الموقع».</p>
+<div id="out"><div class="row">جاري الفحص…</div></div>
+<button onclick="fixIt()">🧹 إصلاح وفتح الموقع</button>
+<button class="r" onclick="location.href='./?nosw=1'">فتح الموقع مباشرة</button>
+<script>
+// مكتوب بأسلوب قديم عمدًا حتى يعمل على أي متصفح
+var out = document.getElementById('out'), rows = [];
+function add(label, ok, extra){
+  rows.push('<div class="row">' + label + ': <span class="' + (ok ? 'ok' : 'no') + '">' + (ok ? '✓' : '✗') + '</span> ' + (extra || '') + '</div>');
+  out.innerHTML = rows.join('');
+}
+function feat(name, code){ try{ new Function(code); return true; }catch(e){ return false; } }
+add('المتصفح', true, '<div class="ua">' + navigator.userAgent + '</div>');
+add('دعم الأكواد الحديثة (?. و ??)', feat('', 'var a={}; return a?.b ?? 1;'));
+add('دعم async/await', feat('', 'async function f(){ await 1; }'));
+add('التخزين المحلي', (function(){ try{ localStorage.setItem('_t','1'); localStorage.removeItem('_t'); return true; }catch(e){ return false; } })());
+var swOk = 'serviceWorker' in navigator;
+if(swOk && navigator.serviceWorker.getRegistrations){
+  navigator.serviceWorker.getRegistrations().then(function(r){ add('نسخة محفوظة (Service Worker)', true, r.length ? r.length + ' مسجّلة' : 'لا يوجد'); });
+}
+var t0 = Date.now(), x = new XMLHttpRequest();
+x.open('GET', './index.html?probe=' + t0, true);
+x.timeout = 30000;
+x.onload = function(){ add('تحميل الصفحة الرئيسية', x.status == 200, (x.responseText.length / 1024).toFixed(0) + 'KB في ' + ((Date.now() - t0) / 1000).toFixed(1) + ' ثانية'); };
+x.onerror = function(){ add('تحميل الصفحة الرئيسية', false, 'تعذّر الاتصال'); };
+x.ontimeout = function(){ add('تحميل الصفحة الرئيسية', false, 'بطيء جدًا (أكثر من 30 ثانية)'); };
+x.send();
+// تجربة تشغيل كود التطبيق نفسه داخل إطار مخفي لالتقاط الأخطاء
+var errs = [];
+var f = document.createElement('iframe'); f.style.cssText = 'width:1px;height:1px;position:absolute;left:-9999px';
+f.onload = function(){
+  setTimeout(function(){
+    var w = f.contentWindow, booted = false;
+    try{ booted = !!(w.LESSONS || w.document.querySelector('#pg-home .tile')); }catch(e){}
+    try{ booted = booted && typeof w.go === 'function'; }catch(e){}
+    add('تشغيل التطبيق', booted && !errs.length, errs.length ? '<div class="ua">' + errs.slice(0, 3).join('<br>') + '</div>' : '');
+  }, 6000);
+};
+f.src = './index.html?nosw=1&probe=1';
+document.body.appendChild(f);
+try{ f.contentWindow.onerror = function(m, s, l){ errs.push(m + ' @' + (s || '').split('/').pop() + ':' + l); }; }catch(e){}
+setTimeout(function(){ try{ f.contentWindow.addEventListener('error', function(e){ errs.push(e.message + ' @' + (e.filename || '').split('/').pop() + ':' + e.lineno); }); }catch(e){} }, 50);
+
+function fixIt(){
+  var done = function(){ location.href = './?fresh=' + Date.now(); };
+  var p = [];
+  try{
+    if(navigator.serviceWorker && navigator.serviceWorker.getRegistrations)
+      p.push(navigator.serviceWorker.getRegistrations().then(function(rs){ return Promise.all(rs.map(function(r){ return r.unregister(); })); }));
+    if(window.caches) p.push(caches.keys().then(function(ks){ return Promise.all(ks.map(function(k){ return caches.delete(k); })); }));
+  }catch(e){}
+  if(!p.length) return done();
+  Promise.all(p).then(done, done);
+}
+</script>
+</body>
+</html>
