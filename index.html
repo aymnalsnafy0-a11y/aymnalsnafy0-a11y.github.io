@@ -327,16 +327,16 @@ window.addEventListener('load',function(){setTimeout(function(){if(typeof window
   .cf-row{display:flex;gap:10px}.cf-row .btn{flex:1}
   .cf-danger{background:#b3261e!important;border-color:#b3261e!important;color:#fff!important}
 </style>
-<script src="memory-art.js?v=59"></script>
-<link rel="stylesheet" href="memory-art.css?v=59">
-<link rel="stylesheet" href="/tutor-panel.css?v=59">
-<link rel="stylesheet" href="/account.css?v=59">
-<link rel="stylesheet" href="/theme.css?v=59">
-<link rel="stylesheet" href="hsk-exam.css?v=59">
-<link rel="stylesheet" href="voice.css?v=59">
-<link rel="stylesheet" href="practice.css?v=59">
-<link rel="stylesheet" href="ui.css?v=59">
-<link rel="stylesheet" href="lookup.css?v=59">
+<script src="memory-art.js?v=60"></script>
+<link rel="stylesheet" href="memory-art.css?v=60">
+<link rel="stylesheet" href="/tutor-panel.css?v=60">
+<link rel="stylesheet" href="/account.css?v=60">
+<link rel="stylesheet" href="/theme.css?v=60">
+<link rel="stylesheet" href="hsk-exam.css?v=60">
+<link rel="stylesheet" href="voice.css?v=60">
+<link rel="stylesheet" href="practice.css?v=60">
+<link rel="stylesheet" href="ui.css?v=60">
+<link rel="stylesheet" href="lookup.css?v=60">
 </head>
 <body>
 
@@ -456,6 +456,10 @@ window.addEventListener('load',function(){setTimeout(function(){if(typeof window
 
 <!-- ============ المفردات ============ -->
 <section class="page" id="pg-vocab">
+  <div class="grp-row" id="grpRow" hidden>
+    <label for="grpSel">📂 القسم</label>
+    <select id="grpSel" onchange="setGroup(this.value)"></select>
+  </div>
   <div class="filter-row" role="tablist" aria-label="اعرض">
       <button class="btn o sm" data-f="all" onclick="setFilter('all')">الكل</button>
       <button class="btn o sm" data-f="due" onclick="setFilter('due')">المستحقّ</button>
@@ -687,7 +691,7 @@ var HanziWriter=function(){"use strict";var t,e,r;const i="undefined"==typeof wi
 </script>
 <script src="audio-index.js?v=b1790907289"></script>
 <script src="lessons-extra.js?v=b1790907289"></script>
-<script src="hz-data.js?v=59" defer></script>
+<script src="hz-data.js?v=60" defer></script>
 
 <script>
 /* ==========================================================================
@@ -1376,7 +1380,7 @@ function useLesson(id){
   $('#dlgBonus').innerHTML = L.bonus ? `<div class="note g" style="margin-top:10px"><b>مكافأة من الحوار</b>${L.bonus}</div>` : '';
   document.querySelector('nav button[data-p="gram"]').style.display = PATTERNS.length ? '' : 'none';
   document.querySelector('nav button[data-p="dlg"]').style.display = DLG.length ? '' : 'none';
-  vFilter='all'; vList=W.slice(); vPos=0;
+  vFilter='all'; vList=listFor('all'); vPos=0; paintGroups();
   paintGram(); paintDlg(); paintAll(); quizIntro();
 }
 /* حماية: نصوص الدروس (خصوصًا المولّدة بالذكاء الاصطناعي أو المنشورة) لا يُسمح فيها إلا بوسوم تنسيق آمنة */
@@ -1959,16 +1963,34 @@ function paintHome(){
    المفردات
    ========================================================================== */
 let vFilter='all', vList=[], vPos=0, vHide={pin:false, mean:false};
+/* الأقسام داخل الدرس الواحد (مثل دليل أيمن): القسم المختار يُحفظ لكل درس */
+function curGroup(){ const g = (state.set.grp||{})[L.id]; return g && GROUPS[g] ? String(g) : ''; }
+function groupW(){ const g = curGroup(); return g ? W.filter(w => String(w.g) === g) : W; }
+function paintGroups(){
+  const row = $('#grpRow'), sel = $('#grpSel'); if(!row || !sel) return;
+  const keys = Object.keys(GROUPS||{}).filter(k => W.some(w => String(w.g) === k));
+  row.hidden = keys.length < 2; if(row.hidden) return;
+  const g = curGroup();
+  sel.innerHTML = '<option value="">📚 كل الأقسام (' + W.length + ' كلمة)</option>' + keys.map((k,i) =>
+    '<option value="' + k + '"' + (k === g ? ' selected' : '') + '>' + (i+1) + '. ' + esc(GROUPS[k]) + ' (' + W.filter(w => String(w.g) === k).length + ')</option>').join('');
+}
+function setGroup(g){
+  state.set.grp = state.set.grp || {}; if(g) state.set.grp[L.id] = g; else delete state.set.grp[L.id]; save();
+  vFilter = 'all'; vList = listFor('all'); vPos = 0; paintGroups(); paintVocab();
+  try{ quizIntro(); }catch(e){}
+  toast(g ? '📂 ' + GROUPS[g] : 'كل الأقسام');
+}
 function listFor(f){
-  if(f==='due')  return W.filter(w=>isDue(w));
-  if(f==='new')  return W.filter(w=>status(w)==='new');
-  if(f==='weak') return W.filter(w=>ws(wkey(w)).bad>0 || status(w)==='lrn');
-  if(f==='known')return W.filter(w=>status(w)==='known');
-  return W.slice();
+  const B = groupW();
+  if(f==='due')  return B.filter(w=>isDue(w));
+  if(f==='new')  return B.filter(w=>status(w)==='new');
+  if(f==='weak') return B.filter(w=>ws(wkey(w)).bad>0 || status(w)==='lrn');
+  if(f==='known')return B.filter(w=>status(w)==='known');
+  return B.slice();
 }
 function setFilter(f){
   vFilter=f; vList=listFor(f);
-  if(!vList.length){ toast('لا توجد كلمات في هذا التصنيف الآن'); vFilter='all'; vList=W.slice(); }
+  if(!vList.length){ toast('لا توجد كلمات في هذا التصنيف الآن'); vFilter='all'; vList=listFor('all'); }
   vPos=0; paintVocab();
 }
 function startSession(kind){
@@ -2061,7 +2083,7 @@ function paintVocab(){
       <div>${memoryPictureCard(w)}${perChar}</div>
     </details>`;
 
-  $('#vocabGrid').innerHTML = W.map(w2=>{
+  $('#vocabGrid').innerHTML = groupW().map(w2=>{
     const st2 = status(w2);
     return `<button class="chip ${st2==='known'?'kno':st2==='lrn'?'lrn':''} ${w2.id===w.id?'cur':''}"
       onclick="openWord('${wkey(w2)}')"><span class="hz">${wordHz(w2)}</span>${pyHtml(wordPy(w2))}</button>`;
@@ -2314,18 +2336,19 @@ function quizIntro(){
     <div class="card">
       <h2 class="sec"><b>🎯</b> اختبار نهاية المذاكرة</h2>
       <p class="sml">أربعة أنواع أسئلة: اختيار المعنى، اختيار الحرف الصيني، سؤال سمعي (تسمع وتختار)، وترتيب كلمات الجملة. الأولوية للكلمات التي أخطأت فيها أو لم تتقنها بعد.</p>
+      ${curGroup()?`<div class="note g sml" style="margin-bottom:8px"><b>📂 الاختبار من قسم: ${esc(GROUPS[curGroup()])}</b>غيّر القسم من صفحة «المفردات».</div>`:''}
       <div class="note b sml" style="margin-bottom:10px"><b>الكلمات التي تحتاج تركيزًا في «${esc(L.title)}»: ${weak}</b>كل خطأ يُسجَّل في «أخطائي»، وكل إجابة صحيحة ترفع الكلمة درجة في خطة التكرار.</div>
       <button class="btn wide" onclick="quizStart(12,false)">ابدأ الاختبار (12 سؤالًا)</button>
       <div class="row eq" style="margin-top:8px">
         <button class="btn o sm" onclick="quizStart(6,false)">سريع (6)</button>
-        <button class="btn o sm" onclick="quizStart(${W.length},false)">شامل للدرس</button>
+        <button class="btn o sm" onclick="quizStart(${groupW().length},false)">${curGroup()?'شامل للقسم':'شامل للدرس'}</button>
         ${LESSONS.length>1?`<button class="btn o sm g" onclick="quizStart(15,true)">كل الدروس</button>`:''}
       </div>
       ${hist.length?`<p class="sml muted" style="margin:10px 0 0">آخر النتائج: ${hist.slice(0,5).map(q=>q.s+'/'+q.t).join(' · ')}</p>`:''}
     </div>`;
 }
 function pickWords(n, all){
-  const pool = all ? LESSONS.flatMap(l=>l.words) : W;
+  const pool = all ? LESSONS.flatMap(l=>l.words) : groupW();
   const sc = w => (ws(wkey(w)).bad*3) + (status(w)==='new'?2:status(w)==='lrn'?1:0) + Math.random();
   return pool.slice().sort((a,b)=>sc(b)-sc(a)).slice(0, Math.min(n, pool.length));
 }
@@ -3943,24 +3966,24 @@ function boot(){
 }
 try{ boot(); }catch(e){ if(window.__fatal) window.__fatal('boot: ' + (e && e.message)); }
 </script>
-<script src="/personal-words.js?v=59"></script>
-<script src="/tutor-panel.js?v=59"></script>
-<script src="/cloud-state.js?v=59"></script>
-<script src="/account.js?v=59"></script>
-<script src="hsk-data.js?v=59"></script>
-<script src="hsk-exam.js?v=59"></script>
-<script src="voice.js?v=59"></script>
-<script src="practice.js?v=59"></script>
-<script src="lookup.js?v=59"></script>
-<script src="tts-local.js?v=59"></script>
-<script src="stroke-order.js?v=59"></script>
-<script src="strokes.js?v=59"></script>
-<script src="write-train.js?v=59"></script>
-<script src="sfx.js?v=59"></script>
-<script src="pinyin-data.js?v=59"></script>
-<script src="pinyin.js?v=59"></script>
-<script src="tutor-avatar.js?v=59"></script>
-<script src="grid.js?v=59"></script>
+<script src="/personal-words.js?v=60"></script>
+<script src="/tutor-panel.js?v=60"></script>
+<script src="/cloud-state.js?v=60"></script>
+<script src="/account.js?v=60"></script>
+<script src="hsk-data.js?v=60"></script>
+<script src="hsk-exam.js?v=60"></script>
+<script src="voice.js?v=60"></script>
+<script src="practice.js?v=60"></script>
+<script src="lookup.js?v=60"></script>
+<script src="tts-local.js?v=60"></script>
+<script src="stroke-order.js?v=60"></script>
+<script src="strokes.js?v=60"></script>
+<script src="write-train.js?v=60"></script>
+<script src="sfx.js?v=60"></script>
+<script src="pinyin-data.js?v=60"></script>
+<script src="pinyin.js?v=60"></script>
+<script src="tutor-avatar.js?v=60"></script>
+<script src="grid.js?v=60"></script>
 <script>
 if("serviceWorker" in navigator){
   var hadController = !!navigator.serviceWorker.controller;
