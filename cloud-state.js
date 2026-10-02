@@ -3,7 +3,7 @@
   const safe=k=>!['__proto__','prototype','constructor'].includes(k);
   const copy=v=>JSON.parse(JSON.stringify(v));
   // بيانات الميزات الجديدة تُزامَن كقيمة واحدة لكل حقل
-  const EXTRA=['hsk','pron','pronLog','dict','weekly','hidden','wsrs'];
+  const EXTRA=['hsk','pron','pronLog','dict','weekly','hidden','wsrs','grpDone'];
   function flatten(s){
     const out={};
     for(const field of ['w','wr','daily','personalKnown'])for(const [key,value]of Object.entries(s[field]||{}))if(safe(key))out[field+':'+key]=copy(value);
