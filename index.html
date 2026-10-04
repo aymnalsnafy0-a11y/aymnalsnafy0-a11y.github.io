@@ -327,16 +327,16 @@ window.addEventListener('load',function(){setTimeout(function(){if(typeof window
   .cf-row{display:flex;gap:10px}.cf-row .btn{flex:1}
   .cf-danger{background:#b3261e!important;border-color:#b3261e!important;color:#fff!important}
 </style>
-<script src="memory-art.js?v=61"></script>
-<link rel="stylesheet" href="memory-art.css?v=61">
-<link rel="stylesheet" href="/tutor-panel.css?v=61">
-<link rel="stylesheet" href="/account.css?v=61">
-<link rel="stylesheet" href="/theme.css?v=61">
-<link rel="stylesheet" href="hsk-exam.css?v=61">
-<link rel="stylesheet" href="voice.css?v=61">
-<link rel="stylesheet" href="practice.css?v=61">
-<link rel="stylesheet" href="ui.css?v=61">
-<link rel="stylesheet" href="lookup.css?v=61">
+<script src="memory-art.js?v=62"></script>
+<link rel="stylesheet" href="memory-art.css?v=62">
+<link rel="stylesheet" href="/tutor-panel.css?v=62">
+<link rel="stylesheet" href="/account.css?v=62">
+<link rel="stylesheet" href="/theme.css?v=62">
+<link rel="stylesheet" href="hsk-exam.css?v=62">
+<link rel="stylesheet" href="voice.css?v=62">
+<link rel="stylesheet" href="practice.css?v=62">
+<link rel="stylesheet" href="ui.css?v=62">
+<link rel="stylesheet" href="lookup.css?v=62">
 </head>
 <body>
 
@@ -692,7 +692,7 @@ var HanziWriter=function(){"use strict";var t,e,r;const i="undefined"==typeof wi
 </script>
 <script src="audio-index.js?v=b1790907289"></script>
 <script src="lessons-extra.js?v=b1790907289"></script>
-<script src="hz-data.js?v=61" defer></script>
+<script src="hz-data.js?v=62" defer></script>
 
 <script>
 /* ==========================================================================
@@ -2056,7 +2056,7 @@ function paintVocab(){
 
   $('#vcard').innerHTML = `
     <div class="vtop">
-      <span class="idx">${vPos+1} / ${vList.length}${GROUPS[w.g]?' · '+esc(GROUPS[w.g]):''}</span>
+      <span class="idx">${vPos+1} / ${vList.length}${(function(){ if(w._L!==L.id){ const l=LESSONS.find(x=>x.id===w._L); return l?' · '+esc(l.title)+(l.groups&&l.groups[w.g]?' · '+esc(l.groups[w.g]):''):''; } return GROUPS[w.g]?' · '+esc(GROUPS[w.g]):''; })()}</span>
       <span class="pill ${st==='known'?'kno':st==='lrn'?'lrn':'new'}">${st==='known'?'محفوظة':st==='lrn'?'قيد الحفظ':'جديدة'}</span>
       <span class="pill ${s.due<=Date.now()&&s.seen?'due':'new'}">${dueTxt}</span>
     </div>
@@ -3989,24 +3989,25 @@ function boot(){
 }
 try{ boot(); }catch(e){ if(window.__fatal) window.__fatal('boot: ' + (e && e.message)); }
 </script>
-<script src="/personal-words.js?v=61"></script>
-<script src="/tutor-panel.js?v=61"></script>
-<script src="/cloud-state.js?v=61"></script>
-<script src="/account.js?v=61"></script>
-<script src="hsk-data.js?v=61"></script>
-<script src="hsk-exam.js?v=61"></script>
-<script src="voice.js?v=61"></script>
-<script src="practice.js?v=61"></script>
-<script src="lookup.js?v=61"></script>
-<script src="tts-local.js?v=61"></script>
-<script src="stroke-order.js?v=61"></script>
-<script src="strokes.js?v=61"></script>
-<script src="write-train.js?v=61"></script>
-<script src="sfx.js?v=61"></script>
-<script src="pinyin-data.js?v=61"></script>
-<script src="pinyin.js?v=61"></script>
-<script src="tutor-avatar.js?v=61"></script>
-<script src="grid.js?v=61"></script>
+<script src="/personal-words.js?v=62"></script>
+<script src="/tutor-panel.js?v=62"></script>
+<script src="/cloud-state.js?v=62"></script>
+<script src="/account.js?v=62"></script>
+<script src="hsk-data.js?v=62"></script>
+<script src="hsk-exam.js?v=62"></script>
+<script src="voice.js?v=62"></script>
+<script src="practice.js?v=62"></script>
+<script src="lookup.js?v=62"></script>
+<script src="tts-local.js?v=62"></script>
+<script src="stroke-order.js?v=62"></script>
+<script src="strokes.js?v=62"></script>
+<script src="write-train.js?v=62"></script>
+<script src="sfx.js?v=62"></script>
+<script src="pinyin-data.js?v=62"></script>
+<script src="pinyin.js?v=62"></script>
+<script src="tutor-avatar.js?v=62"></script>
+<script src="daily-plan.js?v=62"></script>
+<script src="grid.js?v=62"></script>
 <script>
 if("serviceWorker" in navigator){
   var hadController = !!navigator.serviceWorker.controller;
