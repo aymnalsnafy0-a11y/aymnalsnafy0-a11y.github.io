@@ -16,7 +16,8 @@
   // كلمات جديدة فعلًا: لم تُذاكر في أي درس (نفس الحرف في درس آخر يُحسب مذاكَرًا)
   function candidates(exclude){
     const seenHz = new Set();
-    LESSONS.forEach(l => l.words.forEach(w => { if(status(w) !== 'new') seenHz.add(wordHz(w)); }));
+    const viewed = state.viewed || {};
+    LESSONS.forEach(l => l.words.forEach(w => { if(status(w) !== 'new' || viewed[wkey(w)]) seenHz.add(wordHz(w)); }));
     exclude.forEach(k => { const w = findWord(k); if(w) seenHz.add(wordHz(w)); });
     const order = [L, ...LESSONS.filter(l => l !== L && l.id !== 'LX'), ...LESSONS.filter(l => l.id === 'LX' && l !== L)];
     const out = [], g = typeof curGroup === 'function' ? curGroup() : '';
@@ -27,16 +28,39 @@
     });
     return out;
   }
-  function makePlan(n, keep){
+  function makePlan(n, keep, avoid){
     const keys = (keep || []).slice();
-    candidates(keys).slice(0, Math.max(0, n - keys.length)).forEach(w => keys.push(wkey(w)));
+    candidates(keys.concat(avoid || [])).slice(0, Math.max(0, n - keys.length)).forEach(w => keys.push(wkey(w)));
     state.plan = {day: today(), keys, done: false, goal: n};
     save(); return state.plan;
   }
 
-  function startPlan(){
+  function preview(fresh){
     let p = plan();
-    if(!p || (!p.keys.length)) p = makePlan(goal());
+    if(fresh || !p || !p.keys.length) p = makePlan(goal(), null, fresh ? (p ? p.keys : []) : []);
+    if(!p.keys.length){ toast('🎉 ذاكرت كل الكلمات في كل الدروس! راجع المستحقّ أو اختبر نفسك'); go('quiz'); return; }
+    const ws_ = planWords();
+    const old = document.querySelector('.dp-prev'); if(old) old.remove();
+    const d = document.createElement('div'); d.className = 'cf-back dp-prev';
+    d.innerHTML = '<div class="cf-box dp-box" role="dialog" aria-label="خطة اليوم"><h3>📅 خطة اليوم: ' + ws_.length + ' كلمات جديدة</h3>'
+      + '<p class="sml muted">كلمات ما ذاكرتها من قبل، اخترتها لك من الدروس:</p><div class="dp-list">'
+      + ws_.map((w, i) => '<div class="dp-item"><b class="hz">' + wordHz(w) + '</b><span dir="ltr" class="dp-py">' + esc(wordPy(w)) + '</span><span class="dp-m">' + esc(w.m) + '</span><small>' + esc((LESSONS.find(l => l.id === w._L) || {}).title || '') + '</small></div>').join('')
+      + '</div><div class="cf-row"><button class="btn o" data-a="x">إلغاء</button><button class="btn o" data-a="new">🔄 كلمات غيرها</button><button class="btn g" data-a="go">▶ ابدأ</button></div></div>';
+    d.addEventListener('click', ev => {
+      const a = ev.target.closest('[data-a]'); if(ev.target === d){ d.remove(); return; } if(!a) return;
+      if(a.dataset.a === 'x'){ d.remove(); paintHome(); }
+      else if(a.dataset.a === 'new'){ d.remove(); preview(true); }
+      else { d.remove(); openPlan(); }
+    });
+    document.body.appendChild(d); paintHome();
+  }
+  function startPlan(){
+    const p = plan(), pr = progress();
+    if(!p || !p.keys.length || (!p.done && pr.d === 0)) return preview(false);
+    openPlan();
+  }
+  function openPlan(){
+    let p = plan(); if(!p) return preview(false);
     if(!p.keys.length){ toast('🎉 ذاكرت كل الكلمات في كل الدروس! راجع المستحقّ أو اختبر نفسك'); go('quiz'); return; }
     go('vocab'); vFilter = 'plan'; vList = planWords();
     const done = studiedToday(); const first = vList.findIndex(w => !done.has(wordHz(w)));
@@ -45,7 +69,7 @@
   function morePlan(){
     const p = plan(); if(!p) return startPlan();
     makePlan(p.keys.length + goal(), p.keys); state.plan.done = false; save();
-    toast('➕ أضفت ' + goal() + ' كلمات جديدة لخطة اليوم'); startPlan();
+    toast('➕ أضفت ' + goal() + ' كلمات جديدة لخطة اليوم'); openPlan();
   }
   function finishPlan(){
     const p = plan(); if(!p) return; const pr = progress();
@@ -97,6 +121,7 @@
 
   /* بطاقة الرئيسية */
   function paintHero(){
+    const btn0 = $('#nextStudyBtn'); if(btn0 && btn0.hasAttribute('data-study')) btn0.removeAttribute('data-study');
     const p = plan(), btn = $('#nextStudyBtn'), cnt = $('#dailyCount'), bar = $('#dailyProgress'), txt = $('#nextStudyText'), hint = $('#dailyHint');
     if(!btn) return;
     let due = 0; try{ due = W.filter(isDue).length; }catch(e){}
@@ -127,7 +152,11 @@
     const baseList = listFor;
     listFor = window.listFor = function(f){ return f === 'plan' ? planWords() : baseList.apply(this, arguments); };
     const baseVocab = paintVocab;
-    paintVocab = window.paintVocab = function(){ const r = baseVocab.apply(this, arguments); try{ paintBar(); }catch(e){} return r; };
+    paintVocab = window.paintVocab = function(){
+      const r = baseVocab.apply(this, arguments);
+      try{ paintBar(); if(vFilter !== 'plan' && vList[vPos] && document.getElementById('pg-vocab').classList.contains('on')){ const k = wkey(vList[vPos]); state.viewed = state.viewed || {}; if(!state.viewed[k]){ state.viewed[k] = 1; save(); } } }catch(e){}
+      return r;
+    };
     const baseGoal = setDailyGoal;
     setDailyGoal = window.setDailyGoal = function(v){
       const r = baseGoal.apply(this, arguments); const p = plan();
