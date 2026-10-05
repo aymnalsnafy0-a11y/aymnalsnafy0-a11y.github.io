@@ -10,18 +10,18 @@
     var set = document.querySelector('#mdSet .sheet');
     if(set && !document.getElementById('ownCredit')){
       var p = document.createElement('p'); p.id = 'ownCredit'; p.className = 'own-credit';
-      p.innerHTML = '© 2026 <b>أيمن</b> — جميع الحقوق محفوظة.<br>النسخة الأصلية المجانية: <a href="' + ORIGINAL + '" target="_blank" rel="noopener">aymnalsnafy0-a11y.github.io</a>';
+      p.innerHTML = '© 2026 <b>أيمن السنافي</b> — جميع الحقوق محفوظة.<br>النسخة الأصلية المجانية: <a href="' + ORIGINAL + '" target="_blank" rel="noopener">aymnalsnafy0-a11y.github.io</a>';
       set.appendChild(p);
     }
     var home = document.getElementById('pg-home');
     if(home && !document.getElementById('ownFoot')){
       var f = document.createElement('p'); f.id = 'ownFoot'; f.className = 'own-credit';
-      f.innerHTML = 'تطبيق «الصينية بالعربي» من إعداد <b>أيمن</b> © 2026 — جميع الحقوق محفوظة';
+      f.innerHTML = 'تطبيق «الصينية بالعربي» من إعداد <b>أيمن السنافي</b> © 2026 — جميع الحقوق محفوظة';
       home.appendChild(f);
     }
     if(copy && !document.getElementById('copyWarn')){
       var w = document.createElement('div'); w.id = 'copyWarn'; w.className = 'copy-warn';
-      w.innerHTML = '⚠️ هذه نسخة منسوخة بدون إذن من تطبيق «الصينية بالعربي» لصاحبه أيمن. النسخة الأصلية مجانية هنا: <a href="' + ORIGINAL + '">' + ORIGINAL.replace('https://', '') + '</a>';
+      w.innerHTML = '⚠️ هذه نسخة منسوخة بدون إذن من تطبيق «الصينية بالعربي» لصاحبه أيمن السنافي. النسخة الأصلية مجانية هنا: <a href="' + ORIGINAL + '">' + ORIGINAL.replace('https://', '') + '</a>';
       document.body.insertBefore(w, document.body.firstChild);
     }
   }
