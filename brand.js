@@ -2,7 +2,7 @@
 (function(){
   'use strict';
   var ORIGINAL = 'https://aymnalsnafy0-a11y.github.io';
-  var OK = ['aymnalsnafy0-a11y.github.io', 'alsiniya.pages.dev', 'localhost', '127.0.0.1', ''];
+  var OK = ['aymnalsnafy0-a11y.github.io', 'chinese-lessons-38ce0.web.app', 'chinese-lessons-38ce0.firebaseapp.com', 'alsiniya.pages.dev', 'localhost', '127.0.0.1', ''];
   var host = location.hostname;
   var copy = OK.indexOf(host) < 0 && !/\.alsiniya\.pages\.dev$/.test(host);
   function add(){
