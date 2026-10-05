@@ -279,3 +279,8 @@ body.py-open{overflow:hidden}
 .dp-m{font-weight:700;font-size:14px}
 .dp-item small{grid-column:2;color:#6b7c93;font-size:11px}
 .dp-prev .cf-row{flex-wrap:wrap}
+/* الحقوق */
+.own-credit{text-align:center;font-size:12px;color:var(--muted,#5b6b7c);margin:16px 8px 4px;line-height:1.8}
+.own-credit a{color:var(--blue,#1f5f9e);font-weight:700}
+.copy-warn{position:sticky;top:0;z-index:999;background:#a8393c;color:#fff;font-size:13.5px;font-weight:700;line-height:1.7;padding:9px 12px;text-align:center}
+.copy-warn a{color:#ffe08a}

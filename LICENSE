@@ -1,0 +1,24 @@
+حقوق النشر © 2026 أيمن (aymnalsnafy0-a11y) — جميع الحقوق محفوظة.
+Copyright © 2026 Ayman (aymnalsnafy0-a11y). All rights reserved.
+
+تطبيق «الصينية بالعربي / دروس الصينية التفاعلية» — تصميمه وكوده ودروسه ونصوصه
+وترجماته العربية وشروحه وحيل الحفظ و«دليل أيمن الشامل» وشخصية المعلّم — ملك لصاحبه.
+
+يُسمح باستخدام التطبيق مجانًا للتعلّم الشخصي عبر رابطه الأصلي:
+https://aymnalsnafy0-a11y.github.io
+
+ولا يُسمح — بدون إذن كتابي من صاحبه — بنسخ التطبيق أو أجزاء منه، أو إعادة نشره،
+أو بيعه، أو نشره كتطبيق في أي متجر، أو نسبته لغير صاحبه.
+
+This software and its content (code, design, lessons, Arabic translations,
+explanations, the "Ayman Comprehensive Guide" and the tutor character) may be used
+free of charge for personal learning at the original URL above. Copying,
+redistributing, selling, publishing in any app store, or claiming authorship of
+this software or any part of it is prohibited without the owner's written permission.
+
+مكوّنات خارجية تبقى بتراخيصها الأصلية / Third-party components keep their own licenses:
+- Hanzi Writer (MIT) — https://github.com/chanind/hanzi-writer
+- hanzi-writer-data (Arphic Public License) — https://github.com/chanind/hanzi-writer-data
+- cnchar-order stroke types (MIT) — https://github.com/theajack/cnchar
+- audio/py: audio-cmn recordings by Chen Wang (CC BY-SA) — https://github.com/hugolpz/audio-cmn
+  and mp3-chinese-pinyin-sound (Unlicense) — see audio/py/README.md
