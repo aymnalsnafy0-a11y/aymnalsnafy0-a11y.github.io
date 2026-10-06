@@ -9,6 +9,8 @@ import edge_tts
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 VOICES = {'zh-f': 'zh-CN-XiaoxiaoNeural', 'zh-m': 'zh-CN-YunxiNeural', 'ar-f': 'ar-SA-ZariyahNeural', 'ar-m': 'ar-SA-HamedNeural'}
+# المقاطع تُسجَّل بسرعة 0.8 والصفحة تشغّلها بسرعتها الطبيعية (CLIP_RATE في index.html)
+RATE = '-20%'
 HOMO = {'觉': '叫', '还': '孩', '教': '叫', '系': '细'}   # نطق الدرس للحروف متعددة النطق
 norm = lambda s: re.sub(r'[。，？！、,.?!；：\s…“”"\'（）()]', '', str(s))
 fid = lambda t: hashlib.sha1(t.encode()).hexdigest()[:12]
@@ -62,7 +64,7 @@ async def main():
         async with sem:
             for a in range(4):
                 try:
-                    await edge_tts.Communicate(text, VOICES[v]).save(path)
+                    await edge_tts.Communicate(text, VOICES[v], rate=RATE).save(path)
                     if os.path.getsize(path) > 500: return
                 except Exception: pass
                 await asyncio.sleep(2 * (a + 1))

@@ -1551,7 +1551,7 @@ function toggleWordRepeat(){
 function changeWordRate(value){
   const rate=Math.max(0.5,Math.min(1.5,Number(value)||0.8));
   state.set.rate=rate;save();markRate();
-  if(lessonAudioPlayer)lessonAudioPlayer.playbackRate=rate;
+  if(lessonAudioPlayer)lessonAudioPlayer.playbackRate=clipRate(lessonAudioPlayer.src,rate);
   else if(repeatText)speak(repeatText,rate,true);
 }
 
@@ -1593,7 +1593,15 @@ function neuralSrc(lang, text, gOverride){
   const id = idx && idx[lang==='zh' ? AUDIO_NORM(text) : String(text)];
   if(!id) return (window.LocalAudio && window.LocalAudio.src(lang, text)) || '';
   const g = gOverride || ((lang==='zh' ? state.set.zhVoice : state.set.arVoice) === 'm' ? 'm' : 'f');
-  return 'audio/' + lang + '-' + g + '/' + id + '.mp3';
+  return 'audio/' + lang + '-' + g + '/' + id + '.mp3?v=2';
+}
+/* المقاطع العصبية مسجّلة أصلًا بسرعة 0.8 (rate -20% في tools/build_lessons.py)، فتُشغَّل بسرعتها الطبيعية
+   بدل أن يمطّها المتصفح رقميًا (المطّ يشوّه الكلمات القصيرة ويبلع الحروف، خصوصًا في أندرويد). */
+const CLIP_RATE = 0.8;
+function clipRate(src, r){
+  r = Math.max(0.5, Math.min(1.5, Number(r) || 0.8));
+  if(/(^|\/)audio\/(zh|ar)-[fm]\//.test(String(src || ''))){ r = r / CLIP_RATE; if(Math.abs(r - 1) < 0.06) r = 1; }
+  return Math.max(0.5, Math.min(2, r));
 }
 function markNeuralVoices(){
   [['zh','#zhVoiceRow'],['ar','#arVoiceRow']].forEach(([lang,sel])=>{
@@ -1614,7 +1622,7 @@ function playText(text, lang, rate, g){
     if(src){
       stopChineseAudio();
       const a = new Audio(src); lessonAudioPlayer = a;
-      a.playbackRate = Math.max(0.5, Math.min(1.5, Number(rate || 1)));
+      a.playbackRate = clipRate(src, rate || 1);
       a.onended = a.onerror = ()=>{ if(lessonAudioPlayer===a) lessonAudioPlayer=null; res(); };
       a.play().catch(()=>res()); return;
     }
@@ -1647,7 +1655,7 @@ function speak(text, rate, repeat){
     if(arSrc||arabicClip){
       const arPlayer=new Audio(arSrc||('data:audio/wav;base64,'+arabicClip));
       lessonAudioPlayer=arPlayer;
-      arPlayer.playbackRate=Math.max(0.5,Math.min(1.5,Number(rate||state.set.rate)||0.8));
+      arPlayer.playbackRate=clipRate(arSrc,rate||state.set.rate);
       arPlayer.onended=()=>{if(generation!==audioGeneration)return;if(lessonAudioPlayer===arPlayer)lessonAudioPlayer=null;scheduleNext();};
       arPlayer.onerror=failed;arPlayer.play().catch(failed);return;
     }
@@ -1663,7 +1671,7 @@ function speak(text, rate, repeat){
   if(nSrc || clip){
     const player = new Audio(nSrc || ('data:audio/mpeg;base64,' + clip));
     lessonAudioPlayer = player;
-    player.playbackRate = Math.max(0.5, Math.min(1.5, Number(rate || state.set.rate || 0.8)));
+    player.playbackRate = clipRate(nSrc, rate || state.set.rate || 0.8);
     player.loop=!!repeat && !meaning;
     player.onended = () => { if(lessonAudioPlayer===player) lessonAudioPlayer=null; afterChinese(); };
     player.onerror=failed;
