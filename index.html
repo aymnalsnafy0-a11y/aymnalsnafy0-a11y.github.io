@@ -1595,7 +1595,7 @@ function neuralSrc(lang, text, gOverride){
   const id = idx && idx[lang==='zh' ? AUDIO_NORM(text) : String(text)];
   if(!id) return (window.LocalAudio && window.LocalAudio.src(lang, text)) || '';
   const g = gOverride || ((lang==='zh' ? state.set.zhVoice : state.set.arVoice) === 'm' ? 'm' : 'f');
-  return 'audio/' + lang + '-' + g + '/' + id + '.mp3?v=2';
+  return 'audio/' + lang + '-' + g + '/' + id + '.mp3?v=3';
 }
 /* المقاطع العصبية مسجّلة أصلًا بسرعة 0.8 (rate -20% في tools/build_lessons.py)، فتُشغَّل بسرعتها الطبيعية
    بدل أن يمطّها المتصفح رقميًا (المطّ يشوّه الكلمات القصيرة ويبلع الحروف، خصوصًا في أندرويد). */

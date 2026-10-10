@@ -4,7 +4,7 @@
 - audio/ + audio-index.js : أصوات Microsoft العصبية نفسها المستخدمة في الدروس الأصلية
 - sw.js : رفع نسخة الكاش حتى تصل التحديثات للجميع
 يُشغَّل تلقائيًا من GitHub Actions عند رفع درس جديد."""
-import asyncio, glob, hashlib, json, os, re, sys
+import asyncio, glob, hashlib, json, os, re, sys, urllib.parse, urllib.request
 import edge_tts
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -21,6 +21,17 @@ unesc = lambda s: str(s).replace('&amp;', '&').replace('&lt;', '<').replace('&gt
 
 def speak_hz(w): return w.get('shz') or ''.join(c[0] for c in w['ch'])
 def sent_hz(s): return ''.join(t[0] for t in s['t']) + (s.get('ex') or ('？' if s.get('q') else '。'))
+
+def human_clip(key):
+    """تسجيل بشري لكلمات HSK من audio-cmn (متحدّثة أصلية، CC BY-SA) — أوضح من أي صوت آلي."""
+    if not key or len(key) > 4: return None
+    url = 'https://raw.githubusercontent.com/hugolpz/audio-cmn/master/64k/hsk/' + urllib.parse.quote('cmn-' + key + '.mp3')
+    try:
+        with urllib.request.urlopen(url, timeout=20) as r:
+            data = r.read()
+            return data if len(data) > 2000 else None
+    except Exception:
+        return None
 
 def load_packs():
     out = []
@@ -57,10 +68,16 @@ async def main():
         idx['ar'][key] = fid(key)
         for v in ('ar-f', 'ar-m'): jobs.append((v, fid(key), ar_say(text)))
     sem = asyncio.Semaphore(8); fails = []
+    human = {}  # الكلمة ← تسجيل بشري (audio-cmn) إن وُجد
     async def one(v, i, text):
         path = os.path.join(ROOT, 'audio', v, i + '.mp3')
         if os.path.exists(path) and os.path.getsize(path) > 500: return
         os.makedirs(os.path.dirname(path), exist_ok=True)
+        if v.startswith('zh-'):
+            key = norm(text)
+            if key not in human: human[key] = await asyncio.to_thread(human_clip, key)
+            if human[key]:
+                open(path, 'wb').write(human[key]); return
         async with sem:
             for a in range(4):
                 try:
