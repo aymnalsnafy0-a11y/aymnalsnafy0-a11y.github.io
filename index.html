@@ -338,7 +338,7 @@ window.addEventListener('load',function(){setTimeout(function(){if(typeof window
 <link rel="stylesheet" href="hsk-exam.css?v=64">
 <link rel="stylesheet" href="voice.css?v=64">
 <link rel="stylesheet" href="practice.css?v=64">
-<link rel="stylesheet" href="ui.css?v=64">
+<link rel="stylesheet" href="ui.css?v=65">
 <link rel="stylesheet" href="lookup.css?v=64">
 </head>
 <body>
@@ -471,10 +471,12 @@ window.addEventListener('load',function(){setTimeout(function(){if(typeof window
       <button class="btn o sm" data-f="weak" onclick="setFilter('weak')">الضعيفة</button>
       <button class="btn o sm" data-f="known" onclick="setFilter('known')">المحفوظة</button>
   </div>
-  <div class="card" id="vcard"></div>
-  <div class="card">
-    <h2 class="sec"><b>🗂</b> كل كلمات الدرس</h2>
-    <div id="vocabGrid" class="chips"></div>
+  <div class="vlayout">
+    <div class="card" id="vcard"></div>
+    <div class="card vlist">
+      <h2 class="sec"><b>🗂</b> كل كلمات الدرس</h2>
+      <div id="vocabGrid" class="chips"></div>
+    </div>
   </div>
 </section>
 
@@ -2031,12 +2033,14 @@ function startSession(kind){
   setFilter(kind==='due' ? (listFor('due').length?'due':'new') : (listFor('new').length?'new':'due'));
   toast(kind==='due' ? 'جلسة مراجعة: '+vList.length+' كلمة' : 'كلمات جديدة: '+vList.length);
 }
-function openWord(key){
+function openWord(key, fromList){
   const w = findWord(key); if(!w) return;
   if(w._L !== L.id) useLesson(w._L);
   go('vocab'); vFilter='all'; vList=W.slice();
   vPos = Math.max(0, vList.findIndex(x=>x.id===w.id));
   paintVocab();
+  // من قائمة الكلمات: ارجع لبطاقة الكلمة إن لم تكن ظاهرة (في الجوال القائمة تحت البطاقة)
+  if(fromList){ const c=$('#vcard'), r=c.getBoundingClientRect(); if(r.top < 70 || r.top > innerHeight*0.5) window.scrollTo({top: Math.max(0, scrollY + r.top - 80), behavior:'smooth'}); }
 }
 function vNav(d){ vPos = (vPos+d+vList.length) % vList.length; paintVocab(); }
 function memoryPictureCard(w){
@@ -2071,7 +2075,11 @@ function paintVocab(){
       <span class="pill ${st==='known'?'kno':st==='lrn'?'lrn':'new'}">${st==='known'?'محفوظة':st==='lrn'?'قيد الحفظ':'جديدة'}</span>
       <span class="pill ${s.due<=Date.now()&&s.seen?'due':'new'}">${dueTxt}</span>
     </div>
-    <div class="bighz"><button type="button" class="hz" style="background:none;border:0;cursor:pointer" onclick="speak('${speakHz(w)}')" aria-label="انطق الكلمة بالصينية">${wordHz(w)}</button></div>
+    <div class="bighz">
+      <button type="button" class="vnav" onclick="vNav(-1)" aria-label="الكلمة السابقة">›</button>
+      <button type="button" class="hz" style="background:none;border:0;cursor:pointer" onclick="speak('${speakHz(w)}')" aria-label="انطق الكلمة بالصينية">${wordHz(w)}</button>
+      <button type="button" class="vnav" onclick="vNav(1)" aria-label="الكلمة التالية">‹</button>
+    </div>
     <div class="bigpy ${vHide.pin?'hidden-txt':''}" onclick="vHide.pin=false;paintVocab()">${wordPyHtml(w)}</div>
     <div style="text-align:center;margin:4px 0 6px">
       ${state.set.arabicPronunciation ? `<div class="${vHide.pin?'hidden-txt':''}" dir="rtl" style="font-size:24px;font-weight:700;color:var(--violet);margin-top:5px" onclick="vHide.pin=false;paintVocab()">${esc(wordArabicPronunciation(w))}</div><div class="sml muted">نطق تقريبي — استمع للصوت لضبط النغمات</div>` : ''}
@@ -2082,6 +2090,15 @@ function paintVocab(){
       <button onclick="speak('${speakHz(w)}',0.55)"><i>🐢</i>ببطء</button>
       <button data-pron="${esc(speakHz(w))}" data-py="${esc(wordPy(w))}"><i>🎤</i>انطق</button>
       <button onclick="openWrite('${wkey(w)}')"><i>✍️</i>اكتب</button>
+    </div>
+    <div class="row eq" style="margin-bottom:8px">
+      <button class="btn g" onclick="gradeCur(true)">✓ حفظتها</button>
+      <button class="btn r" onclick="gradeCur(false)">↻ تحتاج مراجعة</button>
+    </div>
+    <div class="row eq" style="margin-bottom:12px">
+      <button class="btn o sm" onclick="vNav(-1)">◀ السابق</button>
+      <button class="btn o sm" onclick="vHide={pin:!vHide.pin,mean:!vHide.mean};paintVocab()">👁 اختبر نفسك</button>
+      <button class="btn o sm" onclick="vNav(1)">التالي ▶</button>
     </div>
     <details class="vopts" ${state.set.vOptsOpen?'open':''} ontoggle="state.set.vOptsOpen=this.open;save()">
       <summary>⚙ خيارات الاستماع</summary>
@@ -2103,15 +2120,6 @@ function paintVocab(){
       ${sentPyHtml(w.ex, w._S)}
       <span class="exar">${esc(w._S[w.ex].ar)}</span>
     </div>` : ''}
-    <div class="row eq" style="margin-bottom:8px">
-      <button class="btn g" onclick="gradeCur(true)">✓ حفظتها</button>
-      <button class="btn r" onclick="gradeCur(false)">↻ تحتاج مراجعة</button>
-    </div>
-    <div class="row eq">
-      <button class="btn o sm" onclick="vNav(-1)">◀ السابق</button>
-      <button class="btn o sm" onclick="vHide={pin:!vHide.pin,mean:!vHide.mean};paintVocab()">👁 اختبر نفسك</button>
-      <button class="btn o sm" onclick="vNav(1)">التالي ▶</button>
-    </div>
     <details class="vopts" style="margin-top:12px" ${state.set.vArtOpen?'open':''} ontoggle="state.set.vArtOpen=this.open;save()">
       <summary>🖼 صورة الحفظ وتفكيك الحرف</summary>
       <div>${memoryPictureCard(w)}${perChar}</div>
@@ -2120,7 +2128,7 @@ function paintVocab(){
   $('#vocabGrid').innerHTML = groupW().map(w2=>{
     const st2 = status(w2);
     return `<button class="chip ${st2==='known'?'kno':st2==='lrn'?'lrn':''} ${w2.id===w.id?'cur':''}"
-      onclick="openWord('${wkey(w2)}')"><span class="hz">${wordHz(w2)}</span>${pyHtml(wordPy(w2))}</button>`;
+      onclick="openWord('${wkey(w2)}',1)"><span class="hz">${wordHz(w2)}</span>${pyHtml(wordPy(w2))}</button>`;
   }).join('');
 }
 function gradeCur(good){
