@@ -23,6 +23,9 @@ self.addEventListener('fetch', function(e){
   // اترك الطلبات خارج نطاقنا للشبكة مباشرة (بيانات رسم الحروف/الذكاء لاحقًا)
   try{ if(new URL(req.url).origin !== self.location.origin) return; }catch(e){ return; }
 
+  // مواقع أخرى على نفس النطاق (مساري، الإنجليزي) تُترك للشبكة حتى لا تختلط بصفحة الصيني المحفوظة
+  try{ var p = new URL(req.url).pathname; if(p.indexOf('/masari/') === 0 || p.indexOf('/aymn-englhs/') === 0) return; }catch(e){}
+
   // صفحة التطبيق: الشبكة أولًا (أحدث نسخة دائمًا)، والمحفوظة احتياطًا عند انقطاع الإنترنت
   if(isDoc(req)){
     e.respondWith(

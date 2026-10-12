@@ -1,0 +1,908 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="مساري">
+<meta name="theme-color" content="#1F7A57">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<title>مساري في يولين</title>
+<style>:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Reem+Kufi:wght@500;700&family=Noto+Serif+SC:wght@600;900&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one phone column, 田字格 practice-paper ground, sticky tab bar; jade = Chinese, amber = English */
+:root{
+  --paper:#F3F5F0; --card:#FFFFFF; --ink:#1B2420; --muted:#5D6B64; --rule:#D6DED8; --grid:#C9DCCF;
+  --jade:#1F7A57; --jade-soft:#E1F0E8; --amber:#B86E00; --amber-soft:#FBEFD9; --seal:#B23A2E; --seal-soft:#F7E3E0;
+  --ar:"IBM Plex Sans Arabic","Geeza Pro",Tahoma,sans-serif;
+  --disp:"Reem Kufi","IBM Plex Sans Arabic",sans-serif;
+  --hz:"Noto Serif SC","Songti SC","PingFang SC",serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#111816; --card:#18221F; --ink:#E5ECE8; --muted:#97A69F; --rule:#2A3833; --grid:#1E2C27;
+  --jade:#5CC79A; --jade-soft:#173329; --amber:#F0AE4A; --amber-soft:#3A2B12; --seal:#F08479; --seal-soft:#3B1E1B; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#111816; --card:#18221F; --ink:#E5ECE8; --muted:#97A69F; --rule:#2A3833; --grid:#1E2C27;
+  --jade:#5CC79A; --jade-soft:#173329; --amber:#F0AE4A; --amber-soft:#3A2B12; --seal:#F08479; --seal-soft:#3B1E1B; color-scheme:dark}
+*,*::before,*::after{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--ar);font-size:16px;line-height:1.65;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:44px 44px;background-attachment:fixed}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--jade);outline-offset:2px;border-radius:6px}
+.wrap{max-width:720px;margin:0 auto;padding-inline:16px;padding-block:0 96px}
+.zh{font-family:var(--hz);direction:ltr;unicode-bidi:isolate;font-weight:600}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
+.muted{color:var(--muted)}
+h1,h2,h3{text-wrap:balance;margin:0}
+h2{font-family:var(--disp);font-size:22px;font-weight:700}
+h3{font-size:17px;font-weight:600}
+
+/* header */
+header.top{padding-block:20px 10px;display:flex;align-items:center;gap:14px}
+.stamp{flex:none;width:58px;height:58px;border:2.5px solid var(--seal);color:var(--seal);border-radius:8px;display:grid;place-items:center;
+  font-family:var(--hz);font-weight:900;font-size:26px;transform:rotate(-5deg);background:var(--card)}
+header.top h1{font-family:var(--disp);font-size:26px;line-height:1.2}
+header.top p{margin:0;color:var(--muted);font-size:14px}
+.clocks{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-block:8px 12px}
+.clock{background:var(--card);border:1px solid var(--rule);border-radius:12px;padding:10px 12px}
+.clock small{display:block;color:var(--muted);font-size:12px;letter-spacing:.02em}
+.clock b{font-family:var(--mono);font-size:26px;font-weight:500;direction:ltr;display:inline-block}
+
+/* tabs */
+nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;
+  background:var(--paper);margin-inline:-16px;padding:8px 16px;border-bottom:1px solid var(--rule)}
+nav.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none;border:0;background:transparent;padding:8px 14px;border-radius:999px;color:var(--muted);font-weight:600;white-space:nowrap}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--paper)}
+section.panel{padding-top:18px;display:flex;flex-direction:column;gap:16px}
+section.panel[hidden]{display:none}
+
+.card{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:14px 16px;min-width:0}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.between{justify-content:space-between}
+.btn{border:0;background:var(--jade);color:var(--card);padding:9px 16px;border-radius:10px;font-weight:600}
+.btn.ghost{background:transparent;color:var(--jade);border:1.5px solid var(--jade)}
+.btn.small{padding:5px 12px;font-size:14px}
+.btn.amber{background:var(--amber)}
+.btn:disabled{opacity:.5;cursor:default}
+.chip{border:1.5px solid var(--rule);background:var(--card);border-radius:999px;padding:5px 12px;font-size:14px}
+.chip[aria-pressed="true"]{border-color:var(--jade);background:var(--jade-soft);color:var(--jade);font-weight:600}
+.note{font-size:14px;color:var(--muted)}
+.bar{height:10px;background:var(--rule);border-radius:99px;overflow:hidden;position:relative}
+.bar i{position:absolute;inset-block:0;inset-inline-start:0;background:var(--jade);border-radius:99px;transition:width .4s}
+.bar i.target{background:transparent;border-inline-end:3px solid var(--seal);border-radius:0}
+
+/* next class */
+.next{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center}
+.next .when{font-family:var(--mono);font-size:30px;color:var(--jade);direction:ltr;line-height:1}
+.next .zh{font-size:20px}
+
+/* today's tasks */
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+.summary div{background:var(--paper);border-radius:10px;padding:8px 4px}
+.summary b{display:block;font-family:var(--mono);font-size:22px;font-weight:500}
+.summary small{color:var(--muted);font-size:12px}
+.timeline{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.item{display:grid;grid-template-columns:52px 1fr auto;gap:10px;align-items:start;padding:10px 0;border-top:1px solid var(--rule)}
+.item:first-child{border-top:0}
+.item .t{font-family:var(--mono);font-size:14px;color:var(--muted);direction:ltr;padding-top:2px}
+.item .what{min-width:0}
+.item .what b{font-weight:600}
+.item .what p{margin:2px 0 0;font-size:13.5px;color:var(--muted)}
+.item.class .what b{color:var(--seal)}
+.item.class{background:linear-gradient(90deg,transparent,var(--seal-soft));border-radius:8px}
+.item.en .what b{color:var(--amber)}
+.item.done .what b{text-decoration:line-through;opacity:.6}
+.acts{display:flex;gap:6px;align-items:center}
+.check{width:30px;height:30px;border-radius:8px;border:2px solid var(--rule);background:var(--card);display:grid;place-items:center;font-weight:700;color:var(--card)}
+.check[aria-pressed="true"]{background:var(--jade);border-color:var(--jade)}
+.play{width:30px;height:30px;border-radius:8px;border:1.5px solid var(--jade);background:transparent;color:var(--jade);display:grid;place-items:center;font-size:12px}
+.tag{font-size:11px;padding:1px 7px;border-radius:99px;background:var(--seal-soft);color:var(--seal);margin-inline-start:6px;font-weight:600}
+.tag.en{background:var(--amber-soft);color:var(--amber)}
+
+.week7{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;align-items:end;height:110px;border-bottom:2px dashed var(--seal);position:relative;padding-top:0}
+.week7 .col{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:2px}
+.week7 .col i{display:block;width:70%;background:var(--jade);border-radius:5px 5px 0 0;min-height:2px}
+.week7 .col.low i{background:var(--rule)}
+.week7 .col small{font-size:11px;color:var(--muted);font-family:var(--mono)}
+.week7lbl{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center;font-size:12px;color:var(--muted);margin-top:4px}
+/* prayer */
+.prayers{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;text-align:center}
+.prayers div{padding:6px 2px;border-radius:8px}
+.prayers div.now{background:var(--jade-soft);color:var(--jade)}
+.prayers small{display:block;font-size:12px;color:var(--muted)}
+.prayers b{font-family:var(--mono);font-weight:500;font-size:15px}
+
+/* week */
+.days{display:flex;gap:6px;flex-wrap:wrap}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-inline-end:5px;vertical-align:middle;background:var(--c)}
+
+/* plan */
+.months{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.months li{display:grid;grid-template-columns:96px 1fr;gap:12px;padding:10px 0;border-top:1px dashed var(--rule)}
+.months li:first-child{border-top:0}
+.months li.cur{background:var(--jade-soft);border-radius:8px;padding-inline:8px}
+.months .m{font-weight:600;font-size:14px}
+.months .goal{font-family:var(--mono);color:var(--jade);font-size:13px;direction:ltr;display:inline-block}
+.counter{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.counter input{width:110px;text-align:center;font-family:var(--mono);font-size:22px;border:1.5px solid var(--rule);border-radius:10px;padding:4px;background:var(--paper)}
+
+/* translate */
+textarea{width:100%;min-height:90px;border:1.5px solid var(--rule);border-radius:12px;padding:10px;background:var(--paper);resize:vertical}
+.tr-out{display:flex;flex-direction:column;gap:10px}
+.tr-zh{font-size:30px;line-height:1.5}
+.tr-py{font-family:var(--ar);direction:ltr;text-align:right;color:var(--jade);font-size:17px}
+.saved{list-style:none;padding:0;margin:0}
+.saved li{display:flex;gap:10px;justify-content:space-between;align-items:center;padding:8px 0;border-top:1px solid var(--rule)}
+.cats{display:flex;gap:6px;flex-wrap:wrap}
+.phr{list-style:none;padding:0;margin:0}
+.phr li{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:9px 0;border-top:1px solid var(--rule)}
+.phr li:first-child{border-top:0}
+.phr .zh{font-size:21px;display:block;text-align:right}
+.phr .py{color:var(--jade);font-size:14px;direction:ltr;text-align:right}
+.phr .ar{font-size:14px;color:var(--muted)}
+
+/* money */
+.money{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.money div{background:var(--paper);border-radius:10px;padding:10px}
+.money small{color:var(--muted);font-size:12px;display:block}
+.money b{font-family:var(--mono);font-weight:500;font-size:22px;direction:ltr;display:inline-block}
+.money .warn b{color:var(--seal)}
+form.add{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+form.add input,form.add select,.field{border:1.5px solid var(--rule);border-radius:10px;padding:8px 10px;background:var(--paper);min-width:0;width:100%}
+form.add .full{grid-column:1/-1}
+.catbars{display:flex;flex-direction:column;gap:6px}
+.catbars .r{display:grid;grid-template-columns:80px 1fr 64px;gap:8px;align-items:center;font-size:14px}
+.catbars .num{text-align:left}
+.exlist{list-style:none;padding:0;margin:0;max-height:320px;overflow:auto}
+.exlist li{display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--rule);font-size:14px}
+.x{border:0;background:transparent;color:var(--muted);font-size:18px;padding:0 6px}
+
+/* links */
+.links{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.links a{display:block;text-decoration:none;color:inherit;background:var(--card);border:1px solid var(--rule);border-radius:12px;padding:12px}
+.links a b{display:block}
+.links a small{color:var(--muted);font-size:13px}
+.links a.zhc{border-inline-start:4px solid var(--jade)}
+.links a.enc{border-inline-start:4px solid var(--amber)}
+ul.tips{margin:0;padding-inline-start:20px;font-size:14.5px}
+ul.tips li{margin-block:4px}
+
+/* focus timer */
+.timer{position:fixed;inset:0;z-index:20;background:var(--paper);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;text-align:center}
+.timer .big{font-family:var(--mono);font-size:min(22vw,110px);direction:ltr;line-height:1}
+.timer h3{font-size:22px}
+.sync{font-size:12px;color:var(--muted);text-align:center;margin-top:24px}
+@media (max-width:420px){
+  .prayers b{font-size:13px}
+  .links{grid-template-columns:1fr}
+  .clock b{font-size:22px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header class="top">
+    <div class="stamp" aria-hidden="true">路</div>
+    <div>
+      <h1>مساري في يولين</h1>
+      <p>الهدف: <b>HSK 5</b> والإنجليزي، بخمس ساعات مذاكرة يوميًا</p>
+    </div>
+  </header>
+
+  <div class="clocks">
+    <div class="clock"><small>الصين · يولين</small><b id="clkCN">--:--</b> <span class="muted" id="dateCN"></span></div>
+    <div class="clock"><small>السعودية · الرياض (−٥ ساعات)</small><b id="clkSA">--:--</b> <span class="muted" id="dateSA"></span></div>
+  </div>
+
+  <nav class="tabs" role="tablist" aria-label="أقسام الموقع">
+    <button class="tab" role="tab" data-tab="today" aria-selected="true">اليوم</button>
+    <button class="tab" role="tab" data-tab="week">الأسبوع</button>
+    <button class="tab" role="tab" data-tab="plan">خطة HSK 5</button>
+    <button class="tab" role="tab" data-tab="tr">ترجمة وعبارات</button>
+    <button class="tab" role="tab" data-tab="money">مصروفي</button>
+    <button class="tab" role="tab" data-tab="links">مواقعي</button>
+  </nav>
+
+  <!-- TODAY -->
+  <section class="panel" id="p-today">
+    <div class="card next" id="nextCard"></div>
+
+    <div class="card">
+      <div class="row between"><h2 id="todayTitle">مهام اليوم</h2><span class="note" id="todayStreak"></span></div>
+      <div class="summary" style="margin-block:12px">
+        <div><b id="sMin">0</b><small>دقيقة من ٣٠٠</small></div>
+        <div><b id="sDone">0/7</b><small>مهام منجزة</small></div>
+        <div><b id="sStreak">0</b><small>أيام التزام متتالية</small></div>
+      </div>
+      <div class="bar" aria-hidden="true"><i id="dayBar" style="width:0"></i></div>
+      <p class="note" style="margin:8px 0 0">الأوقات اقتراح. لو فاتك وقت مهمة سوّها بأقرب فراغ، المهم تكمّل الخمس ساعات. اضغط ▶ يشغّل مؤقت المهمة.</p>
+      <ol class="timeline" id="todayList" style="margin-top:8px"></ol>
+    </div>
+
+    <div class="card">
+      <h3>آخر ٧ أيام</h3>
+      <div class="week7" id="week7" style="margin-top:10px"></div>
+      <p class="note" style="margin:6px 0 0">الخط = ٣٠٠ دقيقة. اليوم يحسب التزام من ٢٤٠ دقيقة.</p>
+    </div>
+
+    <div class="card">
+      <div class="row between"><h3>أوقات الصلاة في يولين</h3><span class="note">أم القرى · تقريبية</span></div>
+      <div class="prayers" id="prayers" style="margin-top:10px"></div>
+      <p class="note" style="margin:8px 0 0">محسوبة لإحداثيات يولين. قارنها مرة بتطبيق صلاة أو بمسجد المدينة.</p>
+    </div>
+  </section>
+
+  <!-- WEEK -->
+  <section class="panel" id="p-week" hidden>
+    <div class="card">
+      <h2>جدول الأسبوع</h2>
+      <p class="note" style="margin:4px 0 10px">حصص الجامعة كلها في <span class="zh">文科楼 207</span>. اختر اليوم:</p>
+      <div class="days" id="dayChips"></div>
+      <div class="legend" style="margin-top:10px">
+        <span style="--c:var(--seal)">حصة الجامعة</span><span style="--c:var(--jade)">مذاكرة صيني</span><span style="--c:var(--amber)">إنجليزي</span>
+      </div>
+      <ol class="timeline" id="weekList" style="margin-top:8px"></ol>
+    </div>
+
+    <div class="card">
+      <h3>المنبّهات على الآيفون</h3>
+      <p class="note" style="margin:4px 0 10px">صفحة الويب ما تقدر تشغّل منبّه وهي مقفلة. الحل: احفظ الجدول كملف تقويم، افتحه من تطبيق الملفات واضغط «إضافة الكل». كل حصة ومهمة تجيك بتنبيه على الجوال تلقائيًا، أسبوعيًا حتى ١٥ يناير ٢٠٢٧.</p>
+      <div class="row">
+        <button class="btn" id="icsClasses">ملف حصص الجامعة</button>
+        <button class="btn ghost" id="icsStudy">ملف جدول المذاكرة</button>
+      </div>
+      <p class="note" id="icsMsg" style="margin:8px 0 0"></p>
+      <p class="note" style="margin:6px 0 0">نصيحة: سوّ تقويم جديد باسم «مساري» في الآيفون وأضف الملفات له، عشان لو تغيّر الجدول تحذفه كله بضغطة.</p>
+    </div>
+  </section>
+
+  <!-- PLAN -->
+  <section class="panel" id="p-plan" hidden>
+    <div class="card">
+      <h2>عدّاد الكلمات الصينية</h2>
+      <p class="note" style="margin:4px 0 10px">مستوى HSK 5 في نسخة 2026 يحتاج تقريبًا <b class="num">3600</b> كلمة تراكمية. الهدف نوصلها بنهاية يونيو ٢٠٢٧، يعني قرابة <b class="num">15</b> كلمة جديدة يوميًا.</p>
+      <div class="counter">
+        <button class="btn ghost small" data-w="-1" aria-label="ناقص كلمة">−</button>
+        <input id="wordsInput" type="number" inputmode="numeric" min="0" max="9000" aria-label="عدد الكلمات التي تعرفها">
+        <button class="btn ghost small" data-w="1" aria-label="زائد كلمة">+</button>
+        <button class="btn small" data-w="15">+15 كلمات اليوم</button>
+      </div>
+      <div class="bar" style="margin-top:14px" aria-hidden="true"><i id="wBar" style="width:0"></i><i class="target" id="wTarget" style="width:0"></i></div>
+      <p id="wStatus" style="margin:8px 0 0"></p>
+    </div>
+
+    <div class="card">
+      <h2>الطريق شهرًا بشهر</h2>
+      <ol class="months" id="months" style="margin-top:8px"></ol>
+    </div>
+
+    <div class="card" style="border-inline-start:4px solid var(--amber)">
+      <h2>الإنجليزي من A1</h2>
+      <p class="note" style="margin:4px 0 10px">ساعة يوميًا تكفي توصلك A2 قوي هالسنة. الاختبار مو الحين، فالتركيز على الأساس: كلمات + استماع + كلام.</p>
+      <div class="counter">
+        <button class="btn ghost small" data-ew="-1" aria-label="ناقص كلمة" style="color:var(--amber);border-color:var(--amber)">−</button>
+        <input id="enInput" type="number" inputmode="numeric" min="0" max="9000" aria-label="عدد كلمات الإنجليزي التي تعرفها">
+        <button class="btn ghost small" data-ew="1" aria-label="زائد كلمة" style="color:var(--amber);border-color:var(--amber)">+</button>
+        <button class="btn small amber" data-ew="10">+10 كلمات اليوم</button>
+      </div>
+      <ol class="months" id="enSteps" style="margin-top:10px"></ol>
+    </div>
+
+    <div class="card">
+      <h3>ساعات اليوم الخمس، وش فيها؟</h3>
+      <ul class="tips" id="taskExplain"></ul>
+    </div>
+
+    <div class="card">
+      <h3>قواعد ما تنكسر</h3>
+      <ul class="tips">
+        <li>المراجعة قبل الجديد. لو ضاق وقتك، احذف الكلمات الجديدة ولا تحذف المراجعة.</li>
+        <li>كل كلمة تتعلمها في جملة، مو لحالها.</li>
+        <li>خلّ واحد على الأقل من أصحابك صيني. تبادل لغة: ساعة صيني مقابل ساعة إنجليزي، فتربح اللغتين.</li>
+        <li>اختبار تجريبي كامل كل سبت من شهر مارس، بالتوقيت الحقيقي.</li>
+        <li>تأكّد من مواعيد الاختبار ورسومه من مكتب الطلاب الدوليين أو موقع <span class="num">chinesetest.cn</span>، وسجّل مبكرًا.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- TRANSLATE -->
+  <section class="panel" id="p-tr" hidden>
+    <div class="card">
+      <h2>ترجم أي شي</h2>
+      <p class="note" style="margin:4px 0 10px">اكتب بالعربي أو الصيني أو الإنجليزي. يطلع لك الصيني والبينيين والإنجليزي مع نطق.</p>
+      <label for="trIn" class="note">النص</label>
+      <textarea id="trIn" placeholder="مثال: أبغى دجاج بدون حار، وهل هو حلال؟"></textarea>
+      <div class="row" style="margin-top:8px">
+        <button class="btn" id="trGo">ترجم</button>
+        <span class="note" id="trMsg"></span>
+      </div>
+      <div class="tr-out" id="trOut" hidden style="margin-top:14px"></div>
+    </div>
+
+    <div class="card" id="savedCard" hidden>
+      <h3>عباراتي المحفوظة</h3>
+      <ul class="saved" id="savedList"></ul>
+    </div>
+
+    <div class="card">
+      <h2>عبارات الحياة اليومية</h2>
+      <div class="cats" id="phrCats" style="margin-block:10px"></div>
+      <ul class="phr" id="phrList"></ul>
+      <p class="note" style="margin:8px 0 0">أرقام الطوارئ في الصين: الإسعاف <b class="num">120</b> · الشرطة <b class="num">110</b> · الإطفاء <b class="num">119</b></p>
+    </div>
+  </section>
+
+  <!-- MONEY -->
+  <section class="panel" id="p-money" hidden>
+    <div class="card">
+      <div class="row between"><h2 id="monthTitle">مصروف الشهر</h2></div>
+      <div class="money" style="margin-top:10px">
+        <div><small>الميزانية</small><b id="mBudget">¥0</b></div>
+        <div><small>صرفت</small><b id="mSpent">¥0</b></div>
+        <div id="mLeftBox"><small>الباقي</small><b id="mLeft">¥0</b></div>
+        <div id="mDayBox"><small>تقدر تصرف يوميًا</small><b id="mDay">¥0</b></div>
+      </div>
+      <div class="bar" style="margin-top:12px" aria-hidden="true"><i id="mBar" style="width:0"></i><i class="target" id="mTarget" style="width:0"></i></div>
+      <p class="note" style="margin:6px 0 0">الخط الأحمر = المفروض تكون صارفه لين اليوم.</p>
+    </div>
+
+    <div class="card">
+      <h3>سجّل مصروف</h3>
+      <form class="add" id="exForm" style="margin-top:10px">
+        <input id="exAmt" type="number" inputmode="decimal" step="0.1" min="0" placeholder="المبلغ ¥" required aria-label="المبلغ باليوان">
+        <select id="exCat" aria-label="الفئة"></select>
+        <input id="exNote" class="full" type="text" placeholder="ملاحظة (اختياري)" aria-label="ملاحظة">
+        <button class="btn full" type="submit">أضف</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h3>وين راحت الفلوس؟</h3>
+      <div class="catbars" id="catBars" style="margin-top:10px"></div>
+      <ul class="exlist" id="exList" style="margin-top:12px"></ul>
+    </div>
+
+    <div class="card">
+      <h3>الإعدادات</h3>
+      <div class="row" style="margin-top:8px">
+        <label class="note" for="setSar">الميزانية الشهرية (ريال)</label>
+        <input class="field num" id="setSar" type="number" min="0" style="width:110px">
+        <label class="note" for="setRate">يوان لكل ريال</label>
+        <input class="field num" id="setRate" type="number" step="0.01" min="0" style="width:100px">
+      </div>
+      <p class="note" style="margin:6px 0 0">سعر الصرف تقريبي، عدّله من تطبيق البنك أو أليباي.</p>
+    </div>
+  </section>
+
+  <!-- LINKS -->
+  <section class="panel" id="p-links" hidden>
+    <div class="card">
+      <h2>مواقعي الثلاثة</h2>
+      <div class="links" style="margin-top:10px">
+        <a class="zhc" href="https://aymnalsnafy0-a11y.github.io/" target="_blank" rel="noopener"><b>دروس الصينية التفاعلية</b><small>الدروس، المفردات بأصوات حقيقية، اختبار HSK</small></a>
+        <a class="enc" href="https://aymnalsnafy0-a11y.github.io/aymn-englhs/" target="_blank" rel="noopener"><b>سنافي AE · سياق</b><small>كلمات أكسفورد 5000 من A1، مع المراجعة</small></a>
+      </div>
+      <p class="note" style="margin:8px 0 0">لو الإنجليزي ما فتح على شبكة الجامعة، استخدم العنوان الثاني: <span class="num">engle-e9877.web.app</span></p>
+      <p class="note" style="margin:10px 0 0">لإضافته للشاشة الرئيسية: افتح الموقع في سفاري ← زر المشاركة ← «إضافة إلى الشاشة الرئيسية».</p>
+    </div>
+
+    <div class="card">
+      <h3>تطبيقات مجانية تكمّل الموقع</h3>
+      <ul class="tips">
+        <li><b>Pleco</b>: أفضل قاموس صيني، يشتغل بدون إنترنت.</li>
+        <li><b><span class="zh">百度翻译</span> أو <span class="zh">有道翻译</span></b>: ترجمة بالكاميرا للمنيو واللوحات، وتشتغل في الصين بدون VPN.</li>
+        <li><b>AnkiWeb</b> من المتصفح: بطاقات المراجعة مجانًا (تطبيق الآيفون مدفوع، ما تحتاجه).</li>
+        <li><b>أليباي</b> مع بطاقتك: الدفع في كل مكان تقريبًا، وفيه خرائط وتاكسي.</li>
+      </ul>
+    </div>
+  </section>
+
+  <p class="sync" id="syncNote"></p>
+</div>
+
+<div class="timer" id="timer" hidden role="dialog" aria-modal="true" aria-labelledby="tmName">
+  <p class="muted" id="tmTag"></p>
+  <h3 id="tmName"></h3>
+  <div class="big" id="tmLeft">00:00</div>
+  <p class="muted" id="tmHow" style="max-width:34ch"></p>
+  <div class="row" style="justify-content:center">
+    <button class="btn" id="tmPause">إيقاف مؤقت</button>
+    <button class="btn ghost" id="tmDone">خلصت ✓</button>
+    <button class="btn ghost" id="tmClose">إغلاق</button>
+  </div>
+</div>
+
+<script>
+/* ================= DATA ================= */
+const ROOM = "文科楼 207";
+const CLASSES = {
+  1:[{s:"09:45",e:"11:10",zh:"初级口语 1",ar:"المحادثة",t:"李淼玥"},{s:"14:30",e:"15:55",zh:"汉字识写 1",ar:"كتابة الحروف",t:"黎业田"},{s:"16:15",e:"17:40",zh:"初级听力 1",ar:"الاستماع",t:"韦艳"}],
+  2:[{s:"09:45",e:"11:10",zh:"汉语综合 1",ar:"الصيني الشامل",t:"吕金红"},{s:"14:30",e:"15:55",zh:"汉字识写 1",ar:"كتابة الحروف",t:"黎业田"}],
+  3:[{s:"10:30",e:"11:55",zh:"初级听力 1",ar:"الاستماع",t:"韦艳"}],
+  4:[{s:"09:45",e:"11:10",zh:"初级口语 1",ar:"المحادثة",t:"李淼玥"}],
+  5:[{s:"09:45",e:"11:10",zh:"汉语综合 1",ar:"الصيني الشامل",t:"吕金红"}],
+  6:[],0:[]
+};
+const TASKS = {
+  A:{n:"مراجعة المفردات",m:40,how:"في موقع دروس الصينية: راجع الكلمات المستحقة اليوم قبل أي كلمة جديدة."},
+  B:{n:"كلمات جديدة + كتابة الحروف",m:45,how:"في موقع دروس الصينية: خطة اليوم + ١٥ كلمة. اكتب كل حرف ٥ مرات وقل جملة فيها بصوت عالٍ."},
+  C:{n:"استماع مركّز",m:45,how:"نفس المقطع ٣ مرات: بدون نص، ثم مع النص، ثم ردّد خلفه (تظليل)."},
+  D:{n:"قراءة وقواعد",m:40,how:"نص قصير من مستواك + نقطة قواعد واحدة، واكتب عليها ٣ جمل."},
+  E:{n:"محادثة حقيقية",m:30,how:"كلّم صيني (زميل، بائع، شريك لغة)، أو سجّل صوتك ٣ دقائق تحكي عن يومك."},
+  F:{n:"مراجعة درس الجامعة",m:40,how:"راجع كلمات وحوار حصة اليوم، وحضّر درس بكرة."},
+  G:{n:"الإنجليزي",m:60,en:1,how:"١٥ د: ١٠ كلمات في «سنافي AE». ١٥ د: استماع بطيء مع النص. ١٥ د: قاعدة أساسية واحدة. ١٥ د: قل أو اكتب ٥ جمل عن يومك."}
+};
+const F_WEEKEND = {6:{n:"اختبار تجريبي ومراجعة الأسبوع",how:"حل جزء من اختبار HSK بالتوقيت، وصحّح أخطاءك واكتبها في دفتر."},
+                   0:{n:"تخطيط الأسبوع ومراجعة شاملة",how:"راجع كل كلمات الأسبوع، وشوف جدول الأسبوع الجاي."}};
+const PLAN = {
+  1:[["A","08:20"],["F","12:00"],["B","13:00"],["C","18:30"],["G","19:45"],["D","21:00"],["E","21:45"]],
+  2:[["A","08:20"],["F","11:30"],["B","13:00"],["C","16:30"],["G","19:45"],["D","21:00"],["E","21:45"]],
+  3:[["A","09:00"],["F","12:15"],["B","14:30"],["C","16:00"],["E","17:00"],["G","19:45"],["D","21:00"]],
+  4:[["A","08:20"],["F","11:30"],["B","14:30"],["C","16:00"],["E","17:00"],["G","19:45"],["D","21:00"]],
+  5:[["A","08:20"],["B","14:30"],["F","15:30"],["C","16:30"],["E","17:30"],["G","19:45"],["D","21:00"]],
+  6:[["A","09:00"],["B","10:00"],["C","11:00"],["F","15:00"],["D","16:00"],["G","19:45"],["E","21:00"]],
+  0:[["A","09:00"],["B","10:00"],["C","11:00"],["D","15:00"],["F","16:00"],["G","19:45"],["E","21:00"]]
+};
+const DAYN = ["الأحد","الإثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+const DAYZH = ["星期日","星期一","星期二","星期三","星期四","星期五","星期六"];
+
+const MONTHS = [
+  {k:"2026-10",n:"أكتوبر ٢٠٢٦",w:550,t:"ثبّت النظام: النطق والنغمات وكلمات الجامعة، والتزم بالخمس ساعات."},
+  {k:"2026-11",n:"نوفمبر",w:1000,t:"خلّص مفردات HSK 1–2 وابدأ قوائم HSK 3. ابحث عن شريك لغة صيني."},
+  {k:"2026-12",n:"ديسمبر",w:1450,t:"استماع يومي لحوارات قصيرة، وجمل كاملة في الكتابة."},
+  {k:"2027-01",n:"يناير (إجازة)",w:1950,t:"الإجازة فرصة ذهبية: زِد إلى ٢٠ كلمة يوميًا، وحل أول اختبار HSK 3 تجريبي."},
+  {k:"2027-02",n:"فبراير",w:2300,t:"مفردات HSK 4، وقراءة نصوص أطول، ومحادثة أطول بدون عربي."},
+  {k:"2027-03",n:"مارس",w:2700,t:"اختبار تجريبي كل سبت. فكّر تدخل HSK 4 الرسمي كمحطة تتأكد فيها من مستواك."},
+  {k:"2027-04",n:"أبريل",w:3050,t:"مفردات HSK 5، ومقالات قصيرة، وتدريب على قسم الكتابة."},
+  {k:"2027-05",n:"مايو",w:3350,t:"اختبارات تجريبية كاملة، وراجع دفتر أخطائك كل أسبوع."},
+  {k:"2027-06",n:"يونيو ٢٠٢٧",w:3600,t:"الاختبار الرسمي HSK 5. آخر أسبوعين مراجعة فقط، لا كلمات جديدة."}
+];
+const W_START = {d:"2026-10-12",w:300}, W_END = {d:"2027-06-30",w:3600};
+
+const PHR = {
+  "أكل":[
+    ["这里有清真菜吗？","Zhèlǐ yǒu qīngzhēn cài ma?","هل يوجد هنا أكل حلال؟"],
+    ["我是穆斯林，不吃猪肉。","Wǒ shì Mùsīlín, bù chī zhūròu.","أنا مسلم، ما آكل لحم الخنزير."],
+    ["不要放猪油。","Bú yào fàng zhūyóu.","لا تحط دهن خنزير."],
+    ["不要辣。","Bú yào là.","بدون حار."],
+    ["我要这个。","Wǒ yào zhège.","أبغى هذا."],
+    ["打包。","Dǎbāo.","سفري، غلّفه لي."],
+    ["买单。","Mǎidān.","الحساب لو سمحت."]],
+  "مواصلات":[
+    ["请带我去这个地址。","Qǐng dài wǒ qù zhège dìzhǐ.","وصّلني لهذا العنوان لو سمحت."],
+    ["在这里停。","Zài zhèlǐ tíng.","وقّف هنا."],
+    ["公交站在哪儿？","Gōngjiāo zhàn zài nǎr?","وين موقف الباص؟"],
+    ["多少钱？","Duōshao qián?","كم السعر؟"]],
+  "تسوّق":[
+    ["这个多少钱？","Zhège duōshao qián?","بكم هذا؟"],
+    ["太贵了，便宜一点吧。","Tài guì le, piányi yìdiǎn ba.","غالي مرة، نزّل شوي."],
+    ["可以用支付宝吗？","Kěyǐ yòng Zhīfùbǎo ma?","أقدر أدفع بأليباي؟"],
+    ["有大一点的吗？","Yǒu dà yìdiǎn de ma?","فيه مقاس أكبر؟"],
+    ["我只是看看。","Wǒ zhǐshì kànkan.","بس أتفرج."]],
+  "الجامعة":[
+    ["老师，请再说一遍。","Lǎoshī, qǐng zài shuō yí biàn.","أستاذ، عِد لو سمحت."],
+    ["请说慢一点。","Qǐng shuō màn yìdiǎn.","تكلّم أبطأ لو سمحت."],
+    ["这个字怎么读？","Zhège zì zěnme dú?","كيف أقرأ هذا الحرف؟"],
+    ["这个用中文怎么说？","Zhège yòng Zhōngwén zěnme shuō?","كيف أقول هذا بالصيني؟"],
+    ["我听不懂。","Wǒ tīng bu dǒng.","ما فهمت (بالسمع)."],
+    ["你可以做我的语伴吗？","Nǐ kěyǐ zuò wǒ de yǔbàn ma?","تكون شريكي في تبادل اللغة؟"],
+    ["我教你英语，你教我中文。","Wǒ jiāo nǐ Yīngyǔ, nǐ jiāo wǒ Zhōngwén.","أعلّمك إنجليزي وتعلّمني صيني."]],
+  "صحة وطوارئ":[
+    ["我不舒服。","Wǒ bù shūfu.","أنا تعبان."],
+    ["我头疼。","Wǒ tóuténg.","راسي يعورني."],
+    ["医院在哪儿？","Yīyuàn zài nǎr?","وين المستشفى؟"],
+    ["药店在哪儿？","Yàodiàn zài nǎr?","وين الصيدلية؟"],
+    ["请帮帮我！","Qǐng bāngbang wǒ!","ساعدني لو سمحت!"]]
+};
+const CATS = ["أكل","مواصلات","شريحة ونت","دراسة","أغراض","طلعات","أخرى"];
+
+/* ================= UTIL ================= */
+const $ = s=>document.querySelector(s);
+const esc = s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const AR = n=>String(n);
+function partsIn(tz,d=new Date()){
+  const p = new Intl.DateTimeFormat("en-GB",{timeZone:tz,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23",weekday:"short"}).formatToParts(d);
+  const o={}; p.forEach(x=>o[x.type]=x.value);
+  const wd = {Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6}[o.weekday];
+  return {y:+o.year,mo:+o.month,d:+o.day,h:+o.hour,mi:+o.minute,s:+o.second,wd,key:`${o.year}-${o.month}-${o.day}`,mkey:`${o.year}-${o.month}`};
+}
+const cn = ()=>partsIn("Asia/Shanghai");
+const toMin = t=>{const [h,m]=t.split(":").map(Number);return h*60+m};
+const fmt = m=>`${String(Math.floor(m/60)%24).padStart(2,"0")}:${String(m%60).padStart(2,"0")}`;
+const yuan = n=>"¥"+(Math.round(n*10)/10).toLocaleString("en-US");
+function daysBetween(a,b){return Math.round((Date.UTC(...b.split("-").map((x,i)=>i==1?x-1:+x))-Date.UTC(...a.split("-").map((x,i)=>i==1?x-1:+x)))/864e5)}
+function addDays(key,n){const [y,m,d]=key.split("-").map(Number);const t=new Date(Date.UTC(y,m-1,d+n));return t.toISOString().slice(0,10)}
+function dayItems(wd){
+  const items=[];
+  (CLASSES[wd]||[]).forEach(c=>items.push({type:"class",s:toMin(c.s),e:toMin(c.e),c}));
+  PLAN[wd].forEach(([k,t])=>{
+    const T=TASKS[k]; let n=T.n,how=T.how;
+    if(k==="F"&&F_WEEKEND[wd]){n=F_WEEKEND[wd].n;how=F_WEEKEND[wd].how}
+    items.push({type:"task",k,s:toMin(t),e:toMin(t)+T.m,n,how,m:T.m,en:!!T.en});
+  });
+  return items.sort((a,b)=>a.s-b.s);
+}
+
+/* ================= STATE + STORAGE ================= */
+const DEF = ()=>({log:{},words:300,enWords:400,sar:500,rate:1.9,ex:[],saved:[]});
+const EN_STEPS = [
+  {k:"2026-12",n:"نهاية ديسمبر",lv:"A1 كامل",w:700,t:"الأساسيات بثقة: التعريف بنفسك، الأرقام، الوقت، الأماكن، المضارع البسيط."},
+  {k:"2027-03",n:"نهاية مارس",lv:"A2",w:1200,t:"تحكي عن الماضي وخططك، وتفهم حوار بطيء عن الحياة اليومية."},
+  {k:"2027-06",n:"نهاية يونيو",lv:"A2 قوي",w:1600,t:"تكتب فقرة قصيرة، وتتكلم ٥ دقائق بدون توقف طويل."},
+  {k:"2027-09",n:"نهاية السنة",lv:"قرب B1",w:2000,t:"جاهز تبدأ تحضير اختبار مثل الآيلتس لو قررت."}
+];
+let S = DEF();
+const LK="masari:v1";
+try{const c=JSON.parse(localStorage.getItem(LK)); if(c&&typeof c==="object") S=Object.assign(DEF(),c);}catch(e){}
+let ref=null, writing=false, pending=false, tmr=null;
+function save(){
+  try{localStorage.setItem(LK,JSON.stringify(S))}catch(e){}
+  if(!ref) return;
+  clearTimeout(tmr); tmr=setTimeout(flush,700);
+}
+async function flush(){
+  if(writing){pending=true;return}
+  writing=true;
+  try{ do{ pending=false; await ref.set(JSON.parse(JSON.stringify(S))); }while(pending); setSync("محفوظ في حسابك، يظهر على أي جهاز تفتح منه.") }
+  catch(e){ setSync("ما قدرت أحفظ في الحساب الآن، محفوظ على هذا الجهاز فقط.") }
+  writing=false;
+}
+function setSync(t){$("#syncNote").textContent=t}
+(async()=>{
+  if(!window.claude?.use){setSync("بياناتك محفوظة على هذا الجهاز.");return}
+  try{
+    const [db,user]=await Promise.all([claude.use("db"),claude.use("user")]);
+    if(!db||!user){setSync("بياناتك محفوظة على هذا الجهاز. سجّل دخولك في Claude عشان تنحفظ بحسابك.");return}
+    const id=await user.id();
+    ref=db.doc(`data/users/${id}/main`);
+    const snap=await ref.get();
+    if(snap.exists){S=Object.assign(DEF(),snap.data()); try{localStorage.setItem(LK,JSON.stringify(S))}catch(e){} renderAll();}
+    else{await ref.set(JSON.parse(JSON.stringify(S)))}
+    setSync("محفوظ في حسابك، يظهر على أي جهاز تفتح منه.");
+    ref.onSnapshot(sn=>{
+      if(!sn.exists||sn.metadata.hasPendingWrites||writing) return;
+      const d=sn.data(); if(JSON.stringify(d)===JSON.stringify(S)) return;
+      S=Object.assign(DEF(),JSON.parse(JSON.stringify(d))); renderAll();
+    },()=>{});
+  }catch(e){setSync("بياناتك محفوظة على هذا الجهاز.")}
+})();
+
+/* ================= CLOCKS ================= */
+function tickClocks(){
+  const c=cn(), s=partsIn("Asia/Riyadh");
+  $("#clkCN").textContent=`${String(c.h).padStart(2,"0")}:${String(c.mi).padStart(2,"0")}`;
+  $("#clkSA").textContent=`${String(s.h).padStart(2,"0")}:${String(s.mi).padStart(2,"0")}`;
+  $("#dateCN").textContent=DAYN[c.wd]; $("#dateSA").textContent=DAYN[s.wd];
+}
+
+/* ================= PRAYER TIMES (Umm al-Qura, Yulin) ================= */
+const LAT=22.63, LNG=110.15, TZ=8;
+const dr=d=>d*Math.PI/180, rd=r=>r*180/Math.PI;
+const sinD=d=>Math.sin(dr(d)),cosD=d=>Math.cos(dr(d)),tanD=d=>Math.tan(dr(d));
+const fixA=a=>{a=a%360;return a<0?a+360:a}, fixH=h=>{h=h%24;return h<0?h+24:h};
+function prayerTimes(y,m,d){
+  if(m<=2){y-=1;m+=12}
+  const A=Math.floor(y/100),B=2-A+Math.floor(A/4);
+  const jd=Math.floor(365.25*(y+4716))+Math.floor(30.6001*(m+1))+d+B-1524.5 - LNG/(15*24);
+  const D=jd-2451545.0+0.5;
+  const g=fixA(357.529+0.98560028*D), q=fixA(280.459+0.98564736*D);
+  const L=fixA(q+1.915*sinD(g)+0.020*sinD(2*g)), e=23.439-0.00000036*D;
+  const RA=fixH(rd(Math.atan2(cosD(e)*sinD(L),cosD(L)))/15);
+  const decl=rd(Math.asin(sinD(e)*sinD(L)));
+  const eqt=q/15-RA;
+  const noon=fixH(12-eqt)+TZ-LNG/15;
+  const T=a=>rd(Math.acos((-sinD(a)-sinD(decl)*sinD(LAT))/(cosD(decl)*cosD(LAT))))/15;
+  const asrA=-rd(Math.atan(1/(1+tanD(Math.abs(LAT-decl)))));
+  const fajr=noon-T(18.5), sunrise=noon-T(0.833), dhuhr=noon+2/60, asr=noon+T(asrA), maghrib=noon+T(0.833)+1/60, isha=maghrib+1.5;
+  return [["الفجر",fajr],["الشروق",sunrise],["الظهر",dhuhr],["العصر",asr],["المغرب",maghrib],["العشاء",isha]].map(([n,h])=>[n,Math.round(h*60)]);
+}
+function renderPrayers(){
+  const c=cn(), now=c.h*60+c.mi, pt=prayerTimes(c.y,c.mo,c.d);
+  let cur=-1; pt.forEach(([n,m],i)=>{if(now>=m)cur=i});
+  $("#prayers").innerHTML=pt.map(([n,m],i)=>`<div class="${i===cur&&i!==1?"now":""}"><small>${n}</small><b>${fmt(m)}</b></div>`).join("");
+}
+
+/* ================= TODAY ================= */
+function dayLog(key){return S.log[key]||(S.log[key]={})}
+function minutesDone(key){const l=S.log[key]||{};return Object.keys(TASKS).reduce((a,k)=>a+(l[k]?TASKS[k].m:0),0)}
+function streak(){
+  const today=cn().key; let n=0, k=today;
+  if(minutesDone(k)<240) k=addDays(k,-1);
+  while(minutesDone(k)>=240){n++;k=addDays(k,-1)}
+  return n;
+}
+function renderNext(){
+  const c=cn(), now=c.h*60+c.mi;
+  let found=null;
+  for(let off=0;off<8&&!found;off++){
+    const wd=(c.wd+off)%7;
+    for(const cl of (CLASSES[wd]||[])){
+      const s=toMin(cl.s), e=toMin(cl.e);
+      if(off===0&&now>=e) continue;
+      found={cl,off,wd,s,e,live:off===0&&now>=s};break;
+    }
+  }
+  const el=$("#nextCard");
+  if(!found){el.innerHTML="<p>ما فيه حصص مسجّلة.</p>";return}
+  const {cl,off,wd,s,e,live}=found;
+  let when;
+  if(live) when=`<div class="when">الآن</div>`;
+  else{
+    const mins=off*1440+s-now, h=Math.floor(mins/60), m=mins%60;
+    when=`<div class="when">${off>1?`${off}d`:`${h}:${String(m).padStart(2,"0")}`}</div>`;
+  }
+  const label=live?"حصتك الحين، باقي "+(e-now)+" دقيقة":off===0?"حصتك الجاية اليوم":off===1?"أول حصة بكرة":`أول حصة يوم ${DAYN[wd]}`;
+  el.innerHTML=`${when}<div><div class="note">${label}</div><div><span class="zh">${cl.zh}</span> · ${cl.ar}</div><div class="note"><span class="num">${cl.s}–${cl.e}</span> · <span class="zh" style="font-weight:500">${ROOM} · ${cl.t}</span></div></div>`;
+}
+function itemHTML(it,key,interactive){
+  if(it.type==="class"){
+    return `<li class="item class"><span class="t">${fmt(it.s)}</span><div class="what"><b>${it.c.ar}</b> <span class="zh" style="font-weight:500">${it.c.zh}</span><p>حصة الجامعة حتى <span class="num">${fmt(it.e)}</span> · <span class="zh" style="font-weight:500">${ROOM} · ${it.c.t}</span></p></div><span></span></li>`;
+  }
+  const done=!!(S.log[key]||{})[it.k];
+  const acts=interactive?`<div class="acts"><button class="play" data-play="${it.k}" aria-label="ابدأ مؤقت ${esc(it.n)}">▶</button><button class="check" data-check="${it.k}" aria-pressed="${done}" aria-label="تم ${esc(it.n)}">✓</button></div>`:"<span></span>";
+  return `<li class="item ${it.en?"en":""} ${done&&interactive?"done":""}"><span class="t">${fmt(it.s)}</span><div class="what"><b>${esc(it.n)}</b><span class="tag ${it.en?"en":""}">${it.m} د</span><p>${esc(it.how)}</p></div>${acts}</li>`;
+}
+function renderToday(){
+  const c=cn(), key=c.key, items=dayItems(c.wd);
+  $("#todayTitle").innerHTML=`مهام ${DAYN[c.wd]} <span class="zh muted" style="font-size:15px;font-weight:500">${DAYZH[c.wd]}</span>`;
+  $("#todayList").innerHTML=items.map(it=>itemHTML(it,key,true)).join("");
+  const md=minutesDone(key), l=S.log[key]||{}, nd=Object.keys(TASKS).filter(k=>l[k]).length;
+  $("#sMin").textContent=md; $("#sDone").textContent=`${nd}/7`; $("#sStreak").textContent=streak();
+  $("#dayBar").style.width=Math.min(100,md/3)+"%";
+  const days7=[...Array(7)].map((_,i)=>addDays(key,i-6));
+  $("#week7").innerHTML=days7.map(k=>{const m=minutesDone(k);return `<div class="col ${m<240?"low":""}"><small>${m||""}</small><i style="height:${Math.min(100,m/3)}%"></i></div>`}).join("");
+  $("#week7").insertAdjacentHTML("afterend","");
+  const lbl=days7.map(k=>{const [y,mo,d]=k.split("-").map(Number);return `<span>${DAYN[new Date(Date.UTC(y,mo-1,d)).getUTCDay()].replace("ال","")}</span>`}).join("");
+  let L=document.getElementById("week7lbl"); if(!L){L=document.createElement("div");L.id="week7lbl";L.className="week7lbl";$("#week7").after(L)} L.innerHTML=lbl;
+  $("#todayStreak").textContent=md>=300?"يوم كامل، ما شاء الله":md>=240?"يحسب لك يوم التزام":"";
+}
+document.addEventListener("click",e=>{
+  const ch=e.target.closest("[data-check]");
+  if(ch){const key=cn().key,k=ch.dataset.check,l=dayLog(key); if(l[k]) delete l[k]; else l[k]=1; save(); renderToday(); return}
+  const pl=e.target.closest("[data-play]");
+  if(pl){openTimer(pl.dataset.play)}
+});
+
+/* ================= FOCUS TIMER ================= */
+let tm={k:null,left:0,end:0,run:false,iv:null,wake:null,actx:null};
+function openTimer(k){
+  const wd=cn().wd, T=TASKS[k]; let n=T.n,how=T.how;
+  if(k==="F"&&F_WEEKEND[wd]){n=F_WEEKEND[wd].n;how=F_WEEKEND[wd].how}
+  tm.k=k; tm.left=T.m*60; $("#tmName").textContent=n; $("#tmHow").textContent=how; $("#tmTag").textContent=T.en?"إنجليزي":"صيني";
+  $("#timer").hidden=false; startTm();
+  try{tm.actx=tm.actx||new (window.AudioContext||window.webkitAudioContext)()}catch(e){}
+}
+function startTm(){
+  tm.end=Date.now()+tm.left*1000; tm.run=true; $("#tmPause").textContent="إيقاف مؤقت";
+  clearInterval(tm.iv); tm.iv=setInterval(tickTm,250); tickTm();
+  try{navigator.wakeLock?.request("screen").then(w=>tm.wake=w).catch(()=>{})}catch(e){}
+}
+function tickTm(){
+  if(tm.run) tm.left=Math.max(0,Math.round((tm.end-Date.now())/1000));
+  $("#tmLeft").textContent=`${String(Math.floor(tm.left/60)).padStart(2,"0")}:${String(tm.left%60).padStart(2,"0")}`;
+  if(tm.run&&tm.left<=0){tm.run=false;clearInterval(tm.iv);beep();finishTm()}
+}
+function beep(){
+  const a=tm.actx; if(!a) return;
+  try{[0,0.35,0.7].forEach(t=>{const o=a.createOscillator(),g=a.createGain();o.frequency.value=880;o.connect(g);g.connect(a.destination);g.gain.setValueAtTime(.3,a.currentTime+t);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+t+.3);o.start(a.currentTime+t);o.stop(a.currentTime+t+.3)})}catch(e){}
+}
+function finishTm(){const l=dayLog(cn().key); l[tm.k]=1; save(); renderToday(); $("#tmLeft").textContent="✓"; $("#tmPause").hidden=true}
+function closeTm(){clearInterval(tm.iv);tm.run=false;$("#timer").hidden=true;$("#tmPause").hidden=false;try{tm.wake?.release()}catch(e){}}
+$("#tmPause").onclick=()=>{ if(tm.run){tm.run=false;clearInterval(tm.iv);$("#tmPause").textContent="كمّل"} else startTm() };
+$("#tmDone").onclick=()=>{finishTm();closeTm()};
+$("#tmClose").onclick=closeTm;
+
+/* ================= WEEK ================= */
+let weekDay=cn().wd;
+function renderWeek(){
+  const order=[1,2,3,4,5,6,0];
+  $("#dayChips").innerHTML=order.map(d=>`<button class="chip" data-day="${d}" aria-pressed="${d===weekDay}">${DAYN[d]}</button>`).join("");
+  $("#weekList").innerHTML=dayItems(weekDay).map(it=>itemHTML(it,"",false)).join("");
+}
+$("#dayChips").addEventListener("click",e=>{const b=e.target.closest("[data-day]");if(b){weekDay=+b.dataset.day;renderWeek()}});
+
+/* ================= ICS (calendar alarms) ================= */
+function ics(kind){
+  const base="20261012"; // Monday
+  const until="20270115T235959Z";
+  const pad=n=>String(n).padStart(2,"0");
+  const dateFor=wd=>{const off=(wd+6)%7;const t=new Date(Date.UTC(2026,9,12+off));return `${t.getUTCFullYear()}${pad(t.getUTCMonth()+1)}${pad(t.getUTCDate())}`};
+  const hm=m=>`${pad(Math.floor(m/60))}${pad(m%60)}00`;
+  const L=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Masari//Yulin//AR","CALSCALE:GREGORIAN",
+    "BEGIN:VTIMEZONE","TZID:Asia/Shanghai","BEGIN:STANDARD","DTSTART:19700101T000000","TZOFFSETFROM:+0800","TZOFFSETTO:+0800","TZNAME:CST","END:STANDARD","END:VTIMEZONE"];
+  let n=0;
+  for(let wd=0;wd<7;wd++){
+    dayItems(wd).forEach(it=>{
+      if(kind==="classes"&&it.type!=="class") return;
+      if(kind==="study"&&it.type!=="task") return;
+      const d=dateFor(wd), title=it.type==="class"?`${it.c.ar} ${it.c.zh}`:it.n;
+      const desc=it.type==="class"?`${ROOM} - ${it.c.t}`:it.how;
+      n++;
+      L.push("BEGIN:VEVENT",`UID:masari-${kind}-${wd}-${it.s}@yulin`,`DTSTAMP:${base}T000000Z`,
+        `DTSTART;TZID=Asia/Shanghai:${d}T${hm(it.s)}`,`DTEND;TZID=Asia/Shanghai:${d}T${hm(it.e)}`,
+        `RRULE:FREQ=WEEKLY;UNTIL=${until}`,`SUMMARY:${title}`,`DESCRIPTION:${desc.replace(/[,;]/g,m=>"\\"+m)}`,
+        it.type==="class"?`LOCATION:${ROOM}`:"",
+        "BEGIN:VALARM","ACTION:DISPLAY",`DESCRIPTION:${title}`,`TRIGGER:${it.type==="class"?"-PT15M":"PT0M"}`,"END:VALARM","END:VEVENT");
+    });
+  }
+  L.push("END:VCALENDAR");
+  return {text:L.filter(Boolean).join("\r\n"),n};
+}
+async function saveIcs(kind){
+  const msg=$("#icsMsg"); const {text,n}=ics(kind);
+  try{
+    const dl=window.claude?.use?await window.claude.use("downloads"):null;
+    if(!dl){
+      const a=document.createElement("a");
+      a.href=URL.createObjectURL(new Blob([text],{type:"text/calendar"}));
+      a.download=kind==="classes"?"masari-classes.ics":"masari-study.ics";
+      document.body.appendChild(a); a.click(); a.remove();
+      msg.textContent=`تم تجهيز ${n} موعد أسبوعي. لو سألك الجوال، اختر «إضافة الكل» للتقويم.`;
+      return;
+    }
+    await dl.save({filename:kind==="classes"?"masari-classes.ics":"masari-study.ics",data:new Blob([text],{type:"text/calendar"})});
+    msg.textContent=`تم تجهيز ${n} موعد أسبوعي. افتح الملف من «الملفات» واضغط «إضافة الكل».`;
+  }catch(e){msg.textContent="ما انحفظ الملف. جرّب مرة ثانية ووافق على الحفظ."}
+}
+$("#icsClasses").onclick=()=>saveIcs("classes");
+$("#icsStudy").onclick=()=>saveIcs("study");
+
+/* ================= PLAN ================= */
+function expectedWords(key){
+  const tot=daysBetween(W_START.d,W_END.d), done=Math.max(0,Math.min(tot,daysBetween(W_START.d,key)));
+  return Math.round(W_START.w+(W_END.w-W_START.w)*done/tot);
+}
+function renderPlan(){
+  const key=cn().key, mk=cn().mkey, w=S.words, exp=expectedWords(key);
+  if(document.activeElement!==$("#wordsInput")) $("#wordsInput").value=w;
+  $("#wBar").style.width=Math.min(100,w/36)+"%"; $("#wTarget").style.width=Math.min(100,exp/36)+"%";
+  const diff=w-exp, left=W_END.w-w, days=Math.max(1,daysBetween(key,W_END.d));
+  $("#wStatus").innerHTML = (diff>=0?`<b style="color:var(--jade)">متقدم على الخطة بـ <span class="num">${diff}</span> كلمة.</b>`:`<b style="color:var(--seal)">متأخر عن الخطة بـ <span class="num">${-diff}</span> كلمة.</b>`)
+    + ` <span class="muted">باقي <span class="num">${Math.max(0,left)}</span> كلمة، يعني <span class="num">${Math.max(0,Math.ceil(left/days))}</span> كلمة يوميًا لين نهاية يونيو.</span>`;
+  $("#months").innerHTML=MONTHS.map(m=>`<li class="${m.k===mk?"cur":""}"><div><div class="m">${m.n}</div><span class="goal">${m.w} كلمة</span></div><div>${m.t}</div></li>`).join("");
+  if(document.activeElement!==$("#enInput")) $("#enInput").value=S.enWords;
+  const nextEn=EN_STEPS.findIndex(s=>S.enWords<s.w);
+  $("#enSteps").innerHTML=EN_STEPS.map((s,i)=>`<li class="${i===nextEn?"cur":""}" style="${i===nextEn?"background:var(--amber-soft)":""}"><div><div class="m">${s.n}</div><span class="goal" style="color:var(--amber)">${s.lv} · ${s.w}</span></div><div>${s.w<=S.enWords?"✓ ":""}${s.t}</div></li>`).join("");
+  $("#taskExplain").innerHTML=Object.values(TASKS).map(t=>`<li><b>${t.n}</b> <span class="num muted">(${t.m} د)</span>: ${t.how}</li>`).join("");
+}
+document.querySelectorAll("[data-w]").forEach(b=>b.onclick=()=>{S.words=Math.max(0,S.words+(+b.dataset.w));save();renderPlan()});
+document.querySelectorAll("[data-ew]").forEach(b=>b.onclick=()=>{S.enWords=Math.max(0,(S.enWords||0)+(+b.dataset.ew));save();renderPlan()});
+$("#enInput").addEventListener("change",e=>{const v=parseInt(e.target.value,10);if(!isNaN(v)&&v>=0){S.enWords=v;save()}renderPlan()});
+$("#wordsInput").addEventListener("change",e=>{const v=parseInt(e.target.value,10);if(!isNaN(v)&&v>=0){S.words=v;save()}renderPlan()});
+
+/* ================= SPEECH ================= */
+let voices=[];
+function loadV(){try{voices=speechSynthesis.getVoices()}catch(e){}}
+if("speechSynthesis" in window){loadV();speechSynthesis.onvoiceschanged=loadV}
+function speak(text,lang){
+  if(!("speechSynthesis" in window)) return;
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text); u.lang=lang; u.rate=lang.startsWith("zh")?0.8:0.95;
+  const v=voices.find(v=>v.lang.replace("_","-").toLowerCase().startsWith(lang.toLowerCase())); if(v) u.voice=v;
+  speechSynthesis.speak(u);
+}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-say]");if(b) speak(b.dataset.say,b.dataset.lang||"zh-CN")});
+
+/* ================= TRANSLATE ================= */
+let lastTr=null, samplerP=null;
+const getSampler=()=>samplerP||(samplerP=(window.claude?.use?window.claude.use("sample"):Promise.resolve(null)));
+$("#trGo").onclick=async()=>{
+  const txt=$("#trIn").value.trim(), msg=$("#trMsg"), out=$("#trOut");
+  if(!txt){msg.textContent="اكتب النص أول.";return}
+  const sample=await getSampler();
+  if(!sample){
+    const q=encodeURIComponent(txt);
+    out.hidden=false; msg.textContent="";
+    out.innerHTML=`<p style="margin:0">افتح الترجمة في:</p>
+      <div class="row"><a class="btn" href="https://translate.google.com/?sl=auto&tl=zh-CN&text=${q}&op=translate" target="_blank" rel="noopener">ترجمة Google</a>
+      <a class="btn ghost" href="https://fanyi.baidu.com/#auto/zh/${q}" target="_blank" rel="noopener">百度翻译 (بدون VPN)</a></div>
+      <p class="note" style="margin:0">Google يحتاج VPN في الصين. Baidu يشتغل بدونه.</p>`;
+    return;
+  }
+  $("#trGo").disabled=true; msg.textContent="أترجم…";
+  try{
+    const r=await sample.json(`You help a Saudi Arabic-speaking student living in Yulin, Guangxi, China, who studies Chinese (beginner, aiming for HSK 5) and English.
+Translate the text below. It may be Arabic (often Saudi dialect), Chinese or English. Return ONLY a JSON object:
+{"zh": natural everyday Simplified Chinese a local would actually say,
+ "pinyin": pinyin of zh with tone marks, words separated by spaces,
+ "ar": Arabic meaning (simple Saudi-friendly Arabic),
+ "en": natural English,
+ "note": one short Arabic tip about usage, politeness or a key word (max 20 words), or ""}
+If the text is Chinese, keep zh as given (corrected only if wrong).
+Text:
+"""${txt}"""`,{modelTier:"quick"});
+    lastTr=r;
+    out.hidden=false;
+    out.innerHTML=`<div class="row between"><span class="zh tr-zh">${esc(r.zh)}</span><button class="play" data-say="${esc(r.zh)}" aria-label="انطق الصيني">▶</button></div>
+      <div class="tr-py">${esc(r.pinyin)}</div>
+      <div><span class="muted">عربي:</span> ${esc(r.ar)}</div>
+      <div class="row between"><span dir="ltr" style="text-align:right;flex:1">${esc(r.en)}</span><button class="play" style="border-color:var(--amber);color:var(--amber)" data-say="${esc(r.en)}" data-lang="en-US" aria-label="انطق الإنجليزي">▶</button></div>
+      ${r.note?`<p class="note" style="margin:0">💡 ${esc(r.note)}</p>`:""}
+      <div><button class="btn ghost small" id="trSave">احفظ في عباراتي</button></div>`;
+    msg.textContent="";
+  }catch(e){
+    msg.textContent = e?.code==="not_granted"?"لازم توافق على السماح للموقع يستخدم Claude عشان يترجم.":e?.code==="rate_limited"?"وصلت الحد مؤقتًا، جرّب بعد شوي.":"ما زبطت الترجمة، جرّب مرة ثانية.";
+  }
+  $("#trGo").disabled=false;
+};
+document.addEventListener("click",e=>{
+  if(e.target.id==="trSave"&&lastTr){S.saved.unshift({zh:lastTr.zh,py:lastTr.pinyin,ar:lastTr.ar,en:lastTr.en});S.saved=S.saved.slice(0,150);save();renderSaved();e.target.textContent="انحفظت ✓";e.target.disabled=true}
+  const del=e.target.closest("[data-unsave]");
+  if(del){S.saved.splice(+del.dataset.unsave,1);save();renderSaved()}
+});
+function renderSaved(){
+  $("#savedCard").hidden=!S.saved.length;
+  $("#savedList").innerHTML=S.saved.map((s,i)=>`<li><div style="min-width:0"><span class="zh" style="font-size:20px">${esc(s.zh)}</span><div class="note" dir="ltr" style="text-align:right">${esc(s.py)}</div><div class="note">${esc(s.ar)}</div></div><div class="acts"><button class="play" data-say="${esc(s.zh)}" aria-label="انطق">▶</button><button class="x" data-unsave="${i}" aria-label="احذف">×</button></div></li>`).join("");
+}
+let phrCat=Object.keys(PHR)[0];
+function renderPhr(){
+  $("#phrCats").innerHTML=Object.keys(PHR).map(c=>`<button class="chip" data-pc="${c}" aria-pressed="${c===phrCat}">${c}</button>`).join("");
+  $("#phrList").innerHTML=PHR[phrCat].map(([zh,py,ar])=>`<li><div style="min-width:0"><span class="zh">${zh}</span><div class="py">${py}</div><div class="ar">${ar}</div></div><button class="play" data-say="${zh}" aria-label="انطق">▶</button></li>`).join("");
+}
+$("#phrCats").addEventListener("click",e=>{const b=e.target.closest("[data-pc]");if(b){phrCat=b.dataset.pc;renderPhr()}});
+
+/* ================= MONEY ================= */
+$("#exCat").innerHTML=CATS.map(c=>`<option>${c}</option>`).join("");
+function renderMoney(){
+  const c=cn(), mk=c.mkey, budget=S.sar*S.rate;
+  const list=S.ex.filter(x=>x.d.startsWith(mk));
+  const spent=list.reduce((a,x)=>a+x.a,0), left=budget-spent;
+  const dim=new Date(Date.UTC(c.y,c.mo,0)).getUTCDate(), daysLeft=dim-c.d+1;
+  $("#monthTitle").textContent="مصروف "+new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-latn",{month:"long"}).format(new Date(Date.UTC(c.y,c.mo-1,15)));
+  $("#mBudget").textContent=yuan(budget)+` · ${S.sar} ر`;
+  $("#mSpent").textContent=yuan(spent); $("#mLeft").textContent=yuan(left);
+  $("#mDay").textContent=yuan(Math.max(0,left/daysLeft));
+  $("#mLeftBox").className=left<0?"warn":""; $("#mDayBox").className=left/daysLeft<15?"warn":"";
+  $("#mBar").style.width=Math.min(100,budget?spent/budget*100:0)+"%";
+  $("#mTarget").style.width=Math.min(100,(c.d/dim)*100)+"%";
+  const by={}; list.forEach(x=>by[x.c]=(by[x.c]||0)+x.a);
+  const max=Math.max(1,...Object.values(by));
+  $("#catBars").innerHTML=Object.keys(by).length?Object.entries(by).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="r"><span>${k}</span><div class="bar"><i style="width:${v/max*100}%"></i></div><span class="num">${yuan(v)}</span></div>`).join(""):`<p class="note" style="margin:0">ما سجّلت شي هذا الشهر. أضف أول مصروف من الأعلى، مثلًا غداء المطعم الحلال.</p>`;
+  $("#exList").innerHTML=list.slice().reverse().map(x=>`<li><span class="num muted">${x.d.slice(5)}</span><span>${esc(x.c)}${x.n?` · <span class="muted">${esc(x.n)}</span>`:""}</span><span class="num">${yuan(x.a)}</span><button class="x" data-delex="${esc(x.id)}" aria-label="احذف">×</button></li>`).join("");
+  if(document.activeElement!==$("#setSar")) $("#setSar").value=S.sar;
+  if(document.activeElement!==$("#setRate")) $("#setRate").value=S.rate;
+}
+$("#exForm").addEventListener("submit",e=>{
+  e.preventDefault(); const a=parseFloat($("#exAmt").value); if(!(a>0)) return;
+  S.ex.push({id:Date.now().toString(36),d:cn().key,a,c:$("#exCat").value,n:$("#exNote").value.trim().slice(0,60)});
+  if(S.ex.length>1500) S.ex=S.ex.slice(-1500);
+  $("#exAmt").value="";$("#exNote").value=""; save(); renderMoney();
+});
+$("#exList").addEventListener("click",e=>{const b=e.target.closest("[data-delex]");if(b){S.ex=S.ex.filter(x=>x.id!==b.dataset.delex);save();renderMoney()}});
+$("#setSar").addEventListener("change",e=>{const v=parseFloat(e.target.value);if(v>=0){S.sar=v;save()}renderMoney()});
+$("#setRate").addEventListener("change",e=>{const v=parseFloat(e.target.value);if(v>0){S.rate=v;save()}renderMoney()});
+
+/* ================= TABS ================= */
+function showTab(t){
+  document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t));
+  document.querySelectorAll("section.panel").forEach(p=>p.hidden=p.id!=="p-"+t);
+  try{localStorage.setItem("masari:tab",t)}catch(e){}
+}
+document.querySelector("nav.tabs").addEventListener("click",e=>{const b=e.target.closest(".tab");if(b)showTab(b.dataset.tab)});
+const hashTab=location.hash.slice(1);
+if(["today","week","plan","tr","money","links"].includes(hashTab)) showTab(hashTab);
+else { let t=null; try{t=localStorage.getItem("masari:tab")}catch(e){} if(t&&document.getElementById("p-"+t)) showTab(t); }
+
+/* ================= BOOT ================= */
+function renderAll(){renderNext();renderToday();renderPrayers();renderWeek();renderPlan();renderSaved();renderPhr();renderMoney()}
+tickClocks(); renderAll();
+let lastKey=cn().key;
+setInterval(()=>{tickClocks(); renderNext(); renderPrayers(); const k=cn().key; if(k!==lastKey){lastKey=k;renderAll()}},15000);
+setInterval(tickClocks,1000);
+</script>
+
+</body>
+</html>
