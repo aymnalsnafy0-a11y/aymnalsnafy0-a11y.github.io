@@ -249,12 +249,42 @@ ul.tips li{margin-block:4px}
   <section class="panel" id="p-week" hidden>
     <div class="card">
       <h2>جدول الأسبوع</h2>
-      <p class="note" style="margin:4px 0 10px">حصص الجامعة كلها في <span class="zh">文科楼 207</span>. اختر اليوم:</p>
+      <p class="note" style="margin:4px 0 10px">أوقات المذاكرة تترتب تلقائيًا حول حصصك. اختر اليوم:</p>
       <div class="days" id="dayChips"></div>
       <div class="legend" style="margin-top:10px">
         <span style="--c:var(--seal)">حصة الجامعة</span><span style="--c:var(--jade)">مذاكرة صيني</span><span style="--c:var(--amber)">إنجليزي</span>
       </div>
       <ol class="timeline" id="weekList" style="margin-top:8px"></ol>
+    </div>
+
+    <div class="card" id="editCard">
+      <div class="row between"><h2>تغيّر جدول الجامعة؟</h2></div>
+      <p class="note" style="margin:4px 0 10px">عدّل حصصك هنا. مهام المذاكرة تتحرك لحالها حول الحصص الجديدة.</p>
+
+      <div id="photoBox" hidden style="margin-bottom:14px">
+        <label class="btn" for="schedPhoto" style="display:inline-block">📷 أرسل صورة الجدول الجديد</label>
+        <input id="schedPhoto" type="file" accept="image/*" hidden>
+        <p class="note" id="photoMsg" style="margin:6px 0 0">صوّر الجدول أو اختر صورته، وأنا أقرأه وأعرضه عليك قبل ما أعتمده.</p>
+        <div id="photoPreview" hidden style="margin-top:10px"></div>
+      </div>
+
+      <h3 style="margin-top:4px">حصصك الحالية</h3>
+      <ul class="saved" id="classList" style="margin-top:6px"></ul>
+
+      <h3 style="margin-top:14px">أضف حصة</h3>
+      <form class="add" id="classForm" style="margin-top:8px">
+        <select id="cDay" aria-label="اليوم"></select>
+        <input id="cName" type="text" placeholder="اسم المادة، مثل: المحادثة" required aria-label="اسم المادة">
+        <label class="note" for="cFrom">من<input id="cFrom" type="time" value="09:45" required class="field num"></label>
+        <label class="note" for="cTo">إلى<input id="cTo" type="time" value="11:10" required class="field num"></label>
+        <input id="cZh" type="text" placeholder="الاسم بالصيني (اختياري)" aria-label="الاسم بالصيني">
+        <input id="cTeacher" type="text" placeholder="المعلم (اختياري)" aria-label="المعلم">
+        <input id="cRoom" class="full" type="text" placeholder="القاعة، مثل: 文科楼 207" aria-label="القاعة">
+        <button class="btn full" type="submit">أضف الحصة</button>
+      </form>
+      <p class="note" id="classMsg" style="margin:8px 0 0"></p>
+      <div style="margin-top:10px"><button class="btn ghost small" id="resetClasses">رجّع الجدول الأصلي</button></div>
+      <p class="note" style="margin:6px 0 0">بعد أي تعديل، احفظ ملفات التقويم من جديد تحت، واحذف القديمة من تقويم الآيفون.</p>
     </div>
 
     <div class="card">
@@ -428,7 +458,7 @@ ul.tips li{margin-block:4px}
 <script>
 /* ================= DATA ================= */
 const ROOM = "文科楼 207";
-const CLASSES = {
+const DEFAULT_CLASSES = {
   1:[{s:"09:45",e:"11:10",zh:"初级口语 1",ar:"المحادثة",t:"李淼玥"},{s:"14:30",e:"15:55",zh:"汉字识写 1",ar:"كتابة الحروف",t:"黎业田"},{s:"16:15",e:"17:40",zh:"初级听力 1",ar:"الاستماع",t:"韦艳"}],
   2:[{s:"09:45",e:"11:10",zh:"汉语综合 1",ar:"الصيني الشامل",t:"吕金红"},{s:"14:30",e:"15:55",zh:"汉字识写 1",ar:"كتابة الحروف",t:"黎业田"}],
   3:[{s:"10:30",e:"11:55",zh:"初级听力 1",ar:"الاستماع",t:"韦艳"}],
@@ -525,13 +555,18 @@ const fmt = m=>`${String(Math.floor(m/60)%24).padStart(2,"0")}:${String(m%60).pa
 const yuan = n=>"¥"+(Math.round(n*10)/10).toLocaleString("en-US");
 function daysBetween(a,b){return Math.round((Date.UTC(...b.split("-").map((x,i)=>i==1?x-1:+x))-Date.UTC(...a.split("-").map((x,i)=>i==1?x-1:+x)))/864e5)}
 function addDays(key,n){const [y,m,d]=key.split("-").map(Number);const t=new Date(Date.UTC(y,m-1,d+n));return t.toISOString().slice(0,10)}
+const CL = ()=>(S && S.classes) || DEFAULT_CLASSES;
+const dayClasses = wd=>(CL()[wd]||[]).slice().sort((a,b)=>toMin(a.s)-toMin(b.s));
 function dayItems(wd){
-  const items=[];
-  (CLASSES[wd]||[]).forEach(c=>items.push({type:"class",s:toMin(c.s),e:toMin(c.e),c}));
-  PLAN[wd].forEach(([k,t])=>{
+  const items=[], busy=[];
+  dayClasses(wd).forEach(c=>{const s=toMin(c.s),e=toMin(c.e);items.push({type:"class",s,e,c});busy.push([s-10,e+10])});
+  PLAN[wd].map(([k,t])=>[k,toMin(t)]).sort((a,b)=>a[1]-b[1]).forEach(([k,pref])=>{
     const T=TASKS[k]; let n=T.n,how=T.how;
     if(k==="F"&&F_WEEKEND[wd]){n=F_WEEKEND[wd].n;how=F_WEEKEND[wd].how}
-    items.push({type:"task",k,s:toMin(t),e:toMin(t)+T.m,n,how,m:T.m,en:!!T.en});
+    let s=pref, guard=0, hit;
+    while(guard++<50 && (hit=busy.find(b=>s<b[1]&&s+T.m>b[0]))) s=Math.ceil(hit[1]/5)*5;
+    busy.push([s,s+T.m+5]);
+    items.push({type:"task",k,s,e:s+T.m,n,how,m:T.m,en:!!T.en});
   });
   return items.sort((a,b)=>a.s-b.s);
 }
@@ -629,7 +664,7 @@ function renderNext(){
   let found=null;
   for(let off=0;off<8&&!found;off++){
     const wd=(c.wd+off)%7;
-    for(const cl of (CLASSES[wd]||[])){
+    for(const cl of dayClasses(wd)){
       const s=toMin(cl.s), e=toMin(cl.e);
       if(off===0&&now>=e) continue;
       found={cl,off,wd,s,e,live:off===0&&now>=s};break;
@@ -645,11 +680,11 @@ function renderNext(){
     when=`<div class="when">${off>1?`${off}d`:`${h}:${String(m).padStart(2,"0")}`}</div>`;
   }
   const label=live?"حصتك الحين، باقي "+(e-now)+" دقيقة":off===0?"حصتك الجاية اليوم":off===1?"أول حصة بكرة":`أول حصة يوم ${DAYN[wd]}`;
-  el.innerHTML=`${when}<div><div class="note">${label}</div><div><span class="zh">${cl.zh}</span> · ${cl.ar}</div><div class="note"><span class="num">${cl.s}–${cl.e}</span> · <span class="zh" style="font-weight:500">${ROOM} · ${cl.t}</span></div></div>`;
+  el.innerHTML=`${when}<div><div class="note">${label}</div><div>${cl.zh?`<span class="zh">${esc(cl.zh)}</span> · `:""}${esc(cl.ar)}</div><div class="note"><span class="num">${cl.s}–${cl.e}</span> · <span class="zh" style="font-weight:500">${esc([cl.room||ROOM,cl.t].filter(Boolean).join(" · "))}</span></div></div>`;
 }
 function itemHTML(it,key,interactive){
   if(it.type==="class"){
-    return `<li class="item class"><span class="t">${fmt(it.s)}</span><div class="what"><b>${it.c.ar}</b> <span class="zh" style="font-weight:500">${it.c.zh}</span><p>حصة الجامعة حتى <span class="num">${fmt(it.e)}</span> · <span class="zh" style="font-weight:500">${ROOM} · ${it.c.t}</span></p></div><span></span></li>`;
+    return `<li class="item class"><span class="t">${fmt(it.s)}</span><div class="what"><b>${esc(it.c.ar)}</b> <span class="zh" style="font-weight:500">${esc(it.c.zh||"")}</span><p>حصة الجامعة حتى <span class="num">${fmt(it.e)}</span> · <span class="zh" style="font-weight:500">${esc([it.c.room||ROOM,it.c.t].filter(Boolean).join(" · "))}</span></p></div><span></span></li>`;
   }
   const done=!!(S.log[key]||{})[it.k];
   const acts=interactive?`<div class="acts"><button class="play" data-play="${it.k}" aria-label="ابدأ مؤقت ${esc(it.n)}">▶</button><button class="check" data-check="${it.k}" aria-pressed="${done}" aria-label="تم ${esc(it.n)}">✓</button></div>`:"<span></span>";
@@ -714,6 +749,76 @@ function renderWeek(){
 }
 $("#dayChips").addEventListener("click",e=>{const b=e.target.closest("[data-day]");if(b){weekDay=+b.dataset.day;renderWeek()}});
 
+/* ================= EDIT UNIVERSITY SCHEDULE ================= */
+const ORDER=[1,2,3,4,5,6,0];
+$("#cDay").innerHTML=ORDER.map(d=>`<option value="${d}">${DAYN[d]}</option>`).join("");
+function cloneClasses(){const src=CL(),o={};for(let d=0;d<7;d++)o[d]=(src[d]||[]).map(c=>Object.assign({},c));return o}
+function setClasses(o){S.classes=o;save();renderAll()}
+function renderClassList(){
+  const rows=[];
+  ORDER.forEach(d=>dayClasses(d).forEach(c=>{
+    const i=(CL()[d]||[]).indexOf(c);
+    rows.push(`<li><div style="min-width:0"><b>${DAYN[d]}</b> · <span class="num">${c.s}–${c.e}</span><div>${esc(c.ar)} ${c.zh?`<span class="zh" style="font-weight:500">${esc(c.zh)}</span>`:""}</div><div class="note">${esc([c.room||ROOM,c.t].filter(Boolean).join(" · "))}</div></div><button class="x" data-delclass="${d}:${i}" aria-label="احذف الحصة">×</button></li>`);
+  }));
+  $("#classList").innerHTML=rows.join("")||`<li class="note">ما فيه حصص. أضف أول حصة من تحت.</li>`;
+}
+$("#classList").addEventListener("click",e=>{
+  const b=e.target.closest("[data-delclass]"); if(!b) return;
+  const [d,i]=b.dataset.delclass.split(":").map(Number), o=cloneClasses(); o[d].splice(i,1); setClasses(o);
+  $("#classMsg").textContent="انحذفت الحصة.";
+});
+$("#classForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  const d=+$("#cDay").value, s=$("#cFrom").value, en=$("#cTo").value, ar=$("#cName").value.trim();
+  if(!ar||!s||!en){return}
+  if(toMin(en)<=toMin(s)){$("#classMsg").textContent="وقت النهاية لازم يكون بعد وقت البداية.";return}
+  const o=cloneClasses();
+  o[d].push({s,e:en,ar,zh:$("#cZh").value.trim(),t:$("#cTeacher").value.trim(),room:$("#cRoom").value.trim()||ROOM});
+  setClasses(o);
+  $("#cName").value="";$("#cZh").value="";$("#cTeacher").value="";
+  $("#classMsg").textContent=`انضافت حصة ${ar} يوم ${DAYN[d]}.`;
+});
+$("#resetClasses").onclick=()=>{
+  const b=$("#resetClasses");
+  if(b.dataset.armed){delete b.dataset.armed;b.textContent="رجّع الجدول الأصلي";delete S.classes;save();renderAll();$("#classMsg").textContent="رجع الجدول الأصلي.";return}
+  b.dataset.armed="1";b.textContent="متأكد؟ اضغط مرة ثانية";
+  setTimeout(()=>{if(b.dataset.armed){delete b.dataset.armed;b.textContent="رجّع الجدول الأصلي"}},4000);
+};
+/* read a photo of the timetable (only inside Claude) */
+let photoClasses=null;
+setTimeout(async()=>{
+  try{
+    const sample=await getSampler(); if(!sample) return;
+    const lim=await sample.limits?.(); if(lim && !lim.images) return;
+    $("#photoBox").hidden=false;
+  }catch(e){}
+},0);
+$("#schedPhoto").addEventListener("change",async e=>{
+  const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  const msg=$("#photoMsg"), pv=$("#photoPreview"); pv.hidden=true;
+  msg.textContent="أقرأ الجدول…";
+  try{
+    const sample=await getSampler();
+    const r=await sample.json(`This image is a weekly university timetable for an international student in China (columns are weekdays 星期一..星期日, rows are periods). Extract EVERY class cell.
+Return ONLY a JSON array; each item: {"day": 0-6 where 0=Sunday,1=Monday..6=Saturday, "s":"HH:MM" start, "e":"HH:MM" end, "zh": course name in Chinese as written, "ar": short Arabic translation of the course name, "t": teacher name as written or "", "room": room as written or ""}.
+If a cell writes its own exact time (e.g. 09:45-11:10), use that time instead of the row's period time. Ignore empty cells, lunch and dinner rows. Return [] if no timetable is visible.`,{images:[f],modelTier:"default",cache:false});
+    if(!Array.isArray(r)||!r.length){msg.textContent="ما قدرت ألقى حصص في الصورة. جرّب صورة أوضح، أو أضف الحصص يدويًا.";return}
+    const ok=r.filter(c=>c&&Number.isInteger(+c.day)&&+c.day>=0&&+c.day<=6&&/^\d{1,2}:\d{2}$/.test(c.s)&&/^\d{1,2}:\d{2}$/.test(c.e));
+    photoClasses={};for(let d=0;d<7;d++)photoClasses[d]=[];
+    ok.forEach(c=>photoClasses[+c.day].push({s:c.s.padStart(5,"0"),e:c.e.padStart(5,"0"),zh:String(c.zh||""),ar:String(c.ar||c.zh||"حصة"),t:String(c.t||""),room:String(c.room||"")||ROOM}));
+    pv.hidden=false;
+    pv.innerHTML=`<p style="margin:0 0 6px"><b>هذا اللي قريته (${ok.length} حصة):</b></p><ul class="saved">${ORDER.map(d=>photoClasses[d].map(c=>`<li><div><b>${DAYN[d]}</b> · <span class="num">${c.s}–${c.e}</span> · ${esc(c.ar)} <span class="zh" style="font-weight:500">${esc(c.zh)}</span><div class="note">${esc([c.room,c.t].filter(Boolean).join(" · "))}</div></div></li>`).join("")).join("")}</ul>
+      <div class="row" style="margin-top:8px"><button class="btn" id="photoApply">اعتمد هذا الجدول</button><button class="btn ghost" id="photoCancel">إلغاء</button></div>`;
+    msg.textContent="راجعه، ولو فيه غلط تقدر تعدّله بعد ما تعتمده.";
+  }catch(err){
+    msg.textContent=err?.code==="not_granted"?"لازم توافق إن الموقع يستخدم Claude عشان يقرأ الصورة.":err?.code==="rate_limited"?"وصلت الحد مؤقتًا، جرّب بعد شوي.":"ما قدرت أقرأ الصورة. جرّب مرة ثانية، أو أضف الحصص يدويًا.";
+  }
+});
+document.addEventListener("click",e=>{
+  if(e.target.id==="photoApply"&&photoClasses){setClasses(photoClasses);photoClasses=null;$("#photoPreview").hidden=true;$("#photoMsg").textContent="تم اعتماد الجدول الجديد ✓ وتحرّكت أوقات المذاكرة حوله.";}
+  if(e.target.id==="photoCancel"){photoClasses=null;$("#photoPreview").hidden=true;$("#photoMsg").textContent="صوّر الجدول أو اختر صورته، وأنا أقرأه وأعرضه عليك قبل ما أعتمده.";}
+});
+
 /* ================= ICS (calendar alarms) ================= */
 function ics(kind){
   const base="20261012"; // Monday
@@ -728,13 +833,13 @@ function ics(kind){
     dayItems(wd).forEach(it=>{
       if(kind==="classes"&&it.type!=="class") return;
       if(kind==="study"&&it.type!=="task") return;
-      const d=dateFor(wd), title=it.type==="class"?`${it.c.ar} ${it.c.zh}`:it.n;
-      const desc=it.type==="class"?`${ROOM} - ${it.c.t}`:it.how;
+      const d=dateFor(wd), title=it.type==="class"?`${it.c.ar} ${it.c.zh||""}`.trim():it.n;
+      const desc=it.type==="class"?[it.c.room||ROOM,it.c.t].filter(Boolean).join(" - "):it.how;
       n++;
       L.push("BEGIN:VEVENT",`UID:masari-${kind}-${wd}-${it.s}@yulin`,`DTSTAMP:${base}T000000Z`,
         `DTSTART;TZID=Asia/Shanghai:${d}T${hm(it.s)}`,`DTEND;TZID=Asia/Shanghai:${d}T${hm(it.e)}`,
         `RRULE:FREQ=WEEKLY;UNTIL=${until}`,`SUMMARY:${title}`,`DESCRIPTION:${desc.replace(/[,;]/g,m=>"\\"+m)}`,
-        it.type==="class"?`LOCATION:${ROOM}`:"",
+        it.type==="class"?`LOCATION:${it.c.room||ROOM}`:"",
         "BEGIN:VALARM","ACTION:DISPLAY",`DESCRIPTION:${title}`,`TRIGGER:${it.type==="class"?"-PT15M":"PT0M"}`,"END:VALARM","END:VEVENT");
     });
   }
@@ -897,7 +1002,7 @@ if(["today","week","plan","tr","money","links"].includes(hashTab)) showTab(hashT
 else { let t=null; try{t=localStorage.getItem("masari:tab")}catch(e){} if(t&&document.getElementById("p-"+t)) showTab(t); }
 
 /* ================= BOOT ================= */
-function renderAll(){renderNext();renderToday();renderPrayers();renderWeek();renderPlan();renderSaved();renderPhr();renderMoney()}
+function renderAll(){renderNext();renderToday();renderPrayers();renderWeek();renderClassList();renderPlan();renderSaved();renderPhr();renderMoney()}
 tickClocks(); renderAll();
 let lastKey=cn().key;
 setInterval(()=>{tickClocks(); renderNext(); renderPrayers(); const k=cn().key; if(k!==lastKey){lastKey=k;renderAll()}},15000);
