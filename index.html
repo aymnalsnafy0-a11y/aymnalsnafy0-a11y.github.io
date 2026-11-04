@@ -697,6 +697,7 @@ var HanziWriter=function(){"use strict";var t,e,r;const i="undefined"==typeof wi
 </script>
 <script src="audio-index.js?v=b1793509087"></script>
 <script src="lessons-extra.js?v=b1793509087"></script>
+<script src="hsk3-lessons.js?v=1"></script>
 <script src="hz-data.js?v=64" defer></script>
 
 <script>
@@ -999,6 +1000,8 @@ LESSONS.push({
 
 /* دروس نُشرت من التطبيق وبُنيت على GitHub بأصوات أصلية (lessons-extra.js) */
 if(Array.isArray(window.EXTRA_LESSONS)) window.EXTRA_LESSONS.forEach(function(l){ if(l && l.id && !LESSONS.some(function(x){ return x.id === l.id; })) LESSONS.push(l); });
+
+if(Array.isArray(window.HSK3_LESSONS)) LESSONS.push(...window.HSK3_LESSONS);
 
 /* دروس إضافية للمراجعة (العائلة، الوقت، الأنشطة اليومية) — بعد دروس الكتاب */
 LESSONS.push(
@@ -2399,7 +2402,7 @@ function quizStart(n, all){
   quiz = { live:true, qs:[], i:0, score:0, wrong:[], all:!!all, lessonId:L.id };
   words.forEach((w,k)=>{
     let t = types[k % types.length];
-    if(t==='order' && !(w.ex && w._S[w.ex])) t = 'mc_mean';
+    if(t==='order' && !(w.ex && w._S[w.ex]?.t.length > 1)) t = 'mc_mean';
     quiz.qs.push({ t, w });
   });
   quiz.qs = shuffle(quiz.qs);
