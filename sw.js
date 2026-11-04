@@ -1,4 +1,4 @@
-var CACHE = 'hsk-v75';
+var CACHE = 'hsk-v76';
 var ASSETS = ['./', './index.html', './hsk3-lessons.js?v=1', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', function(e){
