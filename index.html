@@ -383,6 +383,12 @@ window.addEventListener('load',function(){setTimeout(function(){if(typeof window
 
 <!-- ============ الرئيسية: شاشة واحدة واضحة ============ -->
 <section class="page on" id="pg-home">
+  <details class="card" id="lessonNotes">
+    <summary>📝 دفتر ملاحظات الدرس</summary>
+    <label class="sml muted" id="lessonNotesLabel" for="lessonNotesText"></label>
+    <textarea id="lessonNotesText" dir="auto" placeholder="اكتب ملاحظاتك عن هذا الدرس…" aria-describedby="lessonNotesStatus"></textarea>
+    <p class="sml muted" id="lessonNotesStatus" role="status"></p>
+  </details>
   <div class="card" id="installCard" style="display:none"></div>
 
   <div class="card study-hero">
@@ -1293,6 +1299,7 @@ function useLesson(id){
   S = L.sents; W = L.words; PATTERNS = L.patterns || []; DLG = L.dialogue || []; GROUPS = L.groups || {};
   state.cur = L.id; save();
   $('#hSub').textContent = L.title + (L.tag ? ' · ' + L.tag : '');
+  loadLessonNotes();
   $('#btnAllWords').textContent = 'كل المفردات (' + W.length + ')';
   $('#dlgTitle').textContent = L.dlgTitle || 'الحوار';
   $('#dlgBonus').innerHTML = L.bonus ? `<div class="note g" style="margin-top:10px"><b>مكافأة من الحوار</b>${L.bonus}</div>` : '';
@@ -1381,6 +1388,31 @@ function clearMistake(type, ref){ state.mis = state.mis.filter(m => !(m.type===t
    أدوات
    ========================================================================== */
 const $ = s => document.querySelector(s);
+const lessonNotesText = $('#lessonNotesText');
+const lessonNotesStatus = $('#lessonNotesStatus');
+const lessonNotesHint = 'تُحفظ ملاحظاتك تلقائيًا في هذا المتصفح.';
+
+function loadLessonNotes(){
+  $('#lessonNotesLabel').textContent = L.title;
+  lessonNotesText.value = '';
+  lessonNotesStatus.textContent = lessonNotesHint;
+  try {
+    lessonNotesText.value = localStorage.getItem('hsk:lesson-notes:' + L.id) || '';
+  } catch(e) {
+    lessonNotesStatus.textContent = 'تعذّر فتح الملاحظات المحفوظة في هذا المتصفح.';
+  }
+}
+
+lessonNotesText.addEventListener('input', function(){
+  const key = 'hsk:lesson-notes:' + L.id;
+  try {
+    if(lessonNotesText.value) localStorage.setItem(key, lessonNotesText.value);
+    else localStorage.removeItem(key);
+    lessonNotesStatus.textContent = lessonNotesHint;
+  } catch(e) {
+    lessonNotesStatus.textContent = 'تعذّر حفظ الملاحظات في هذا المتصفح.';
+  }
+});
 const el = h => { const d=document.createElement('div'); d.innerHTML=h.trim(); return d.firstChild; };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const shuffle = a => a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(v=>v[1]);
