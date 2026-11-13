@@ -1,53 +1,70 @@
-var CACHE = 'hsk-v80';
-var ASSETS = ['./', './index.html', './hsk3-lessons.js?v=2', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
+var CACHE = 'hsk-v81';
+var PAGES = ['/', '/en/'];
+var DOCUMENTS = PAGES.flatMap(function(page){
+  return [page, page + 'privacy.html'];
+});
+
+function pathFor(url){
+  return new URL(url, self.location.origin).pathname.replace(/\/index\.html$/, '/');
+}
+
+function loadPage(cache, path){
+  return fetch(path, {cache:'reload'}).then(function(response){
+    if(!response.ok) throw new Error('Unavailable page ' + path);
+    return Promise.all([cache.put(path, response.clone()), response.text()]);
+  }).then(function(results){
+    if(!PAGES.includes(path)) return;
+    var assets = Array.from(results[1].matchAll(
+      /<(?:script|link)\b[^>]*?\b(?:src|href)="([^"]+\.(?:js|css|webmanifest|png)(?:\?[^"]*)?)"/g
+    ), function(match){ return new URL(match[1], self.location.origin + '/'); });
+    return cache.addAll(Array.from(new Set(assets.filter(function(url){
+      return url.origin === self.location.origin;
+    }).map(function(url){ return url.href; }))));
+  });
+}
 
 self.addEventListener('install', function(e){
-  e.waitUntil(caches.open(CACHE).then(function(c){ return c.addAll(ASSETS); })
-    .then(function(){ return self.skipWaiting(); }));
+  e.waitUntil(caches.open(CACHE).then(function(cache){
+    return Promise.all(DOCUMENTS.map(function(path){ return loadPage(cache, path); }));
+  }).then(function(){ return self.skipWaiting(); }));
 });
 
 self.addEventListener('activate', function(e){
-  e.waitUntil(caches.keys().then(function(ks){
-    return Promise.all(ks.filter(function(k){ return k !== CACHE; }).map(function(k){ return caches.delete(k); }));
+  e.waitUntil(caches.keys().then(function(keys){
+    return Promise.all(keys.filter(function(key){
+      return key.indexOf('hsk-v') === 0 && key !== CACHE;
+    }).map(function(key){ return caches.delete(key); }));
   }).then(function(){ return self.clients.claim(); }));
 });
 
-function isDoc(req){
-  return req.mode === 'navigate' || (req.headers.get('accept') || '').indexOf('text/html') >= 0;
-}
-
 self.addEventListener('fetch', function(e){
   var req = e.request;
-  if(req.method !== 'GET') return;
+  var url = new URL(req.url);
+  if(req.method !== 'GET' || url.origin !== self.location.origin) return;
+  var path = pathFor(url);
+  if(/^\/(masari|aymn-englhs|api)(\/|$)/.test(path)) return;
 
-  // اترك الطلبات خارج نطاقنا للشبكة مباشرة (بيانات رسم الحروف/الذكاء لاحقًا)
-  try{ if(new URL(req.url).origin !== self.location.origin) return; }catch(e){ return; }
-
-  // مواقع أخرى على نفس النطاق (مساري، الإنجليزي) تُترك للشبكة حتى لا تختلط بصفحة الصيني المحفوظة
-  try{ var p = new URL(req.url).pathname; if(p.indexOf('/masari/') === 0 || p.indexOf('/aymn-englhs/') === 0) return; }catch(e){}
-
-  // صفحة التطبيق: الشبكة أولًا (أحدث نسخة دائمًا)، والمحفوظة احتياطًا عند انقطاع الإنترنت
-  if(isDoc(req)){
-    e.respondWith(
-      fetch(req, {cache:'no-store'}).then(function(r){
-        var copy = r.clone();
-        caches.open(CACHE).then(function(c){ c.put('./index.html', copy); });
-        return r;
-      }).catch(function(){
-        return caches.match('./index.html').then(function(hit){ return hit || caches.match('./'); });
-      })
-    );
+  if(req.mode === 'navigate'){
+    if(!DOCUMENTS.includes(path)) return;
+    e.respondWith(caches.open(CACHE).then(async function(cache){
+      try{
+        var response = await fetch(req, {cache:'no-store'});
+        if(response.ok) await cache.put(path, response.clone());
+        return response;
+      }catch(error){
+        return await cache.match(path) || Response.error();
+      }
+    }));
     return;
   }
 
-  // الأيقونات والمانيفست: المحفوظة أولًا (لا تتغيّر)
-  e.respondWith(caches.match(req).then(function(hit){
-    return hit || fetch(req).then(function(r){
-      if(r && r.status === 200){
-        var c2 = r.clone();
-        caches.open(CACHE).then(function(c){ c.put(req, c2); });
-      }
-      return r;
-    });
+  e.respondWith(caches.open(CACHE).then(async function(cache){
+    var hit = await cache.match(req);
+    if(hit) return hit;
+    var response = await fetch(req);
+    if(response.ok && response.status === 200 && !req.headers.has('range')){
+      await cache.put(req, response.clone());
+    }
+    return response;
   }));
 });

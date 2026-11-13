@@ -2,7 +2,7 @@
 (function(){
   'use strict';
   const panel=document.createElement('aside');
-  panel.id='tutorPanel';panel.className='tutor-panel';panel.hidden=true;panel.dir='rtl';
+  panel.id='tutorPanel';panel.className='tutor-panel';panel.hidden=true;panel.dir=document.documentElement.dir;
   panel.setAttribute('role','dialog');panel.setAttribute('aria-label','معلّم الصينية');
   panel.innerHTML='<header class="tutor-head" title="اسحب من هنا لتحريك النافذة"><strong>老师 · معلّمك</strong><div><button type="button" id="tutorClear" title="مسح المحادثة">محادثة جديدة</button> <button type="button" id="tutorFull" title="ملء الشاشة" aria-label="ملء الشاشة">⛶</button> <button type="button" id="tutorClose" aria-label="إغلاق المعلّم">✕</button></div></header><div class="tutor-context" id="tutorContext"></div><div class="tutor-actions"><button type="button" data-tutor-question="اشرح لي ما أذاكره الآن مع مثال والبينيين">اشرح الحالي</button><button type="button" data-tutor-question="اختبرني بسؤال واحد من درسي وانتظر إجابتي">اختبرني</button><button type="button" data-tutor-question="ساعدني أحفظ شكل الحرف الحالي بحيلة بصرية، وميّزها عن أصل الحرف">ساعدني أحفظ</button></div>';
   document.body.appendChild(panel);

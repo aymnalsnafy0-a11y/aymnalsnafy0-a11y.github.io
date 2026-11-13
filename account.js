@@ -77,7 +77,7 @@
    const [appLib,authLib,storeLib]=await Promise.all([import('https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js'),import('https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js'),import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js')]);
    sdk={...authLib,...storeLib};
    const app=appLib.getApps().length?appLib.getApp():appLib.initializeApp({apiKey:'AIzaSyAcA8JJ43RIg7o3lrv5mK_5DUVzxCPNG3Y',authDomain:'chinese-lessons-38ce0.firebaseapp.com',projectId:'chinese-lessons-38ce0',storageBucket:'chinese-lessons-38ce0.firebasestorage.app',messagingSenderId:'105280877994',appId:'1:105280877994:web:34aa1a15b26cb8b36e67d3'});
-   auth=sdk.getAuth(app);auth.languageCode='ar';db=sdk.getFirestore(app);
+   auth=sdk.getAuth(app);auth.languageCode=document.documentElement.lang;db=sdk.getFirestore(app);
    await sdk.setPersistence(auth,sdk.browserLocalPersistence);
    sdk.onAuthStateChanged(auth,next=>accountChanged(next).catch(e=>msg(errorText(e))));msg('');
   }catch(e){sdk=null;msg('تعذّر تحميل تسجيل الدخول. تقدر تواصل المذاكرة كزائر وتعيد الاتصال لاحقًا.');$a('accountRetry').hidden=false;}

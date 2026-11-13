@@ -1,0 +1,37 @@
+{
+  "name": "Chinese Lessons",
+  "short_name": "Chinese Lessons",
+  "lang": "en",
+  "dir": "ltr",
+  "start_url": "/en/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f2f6fa",
+  "theme_color": "#1f5f9e",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "id": "/en/",
+  "description": "Learn Chinese (HSK1) in English: vocabulary with audio, pinyin and tones with human recordings, writing letters step by step, tests, and an intelligent teacher.",
+  "categories": [
+    "education"
+  ]
+}

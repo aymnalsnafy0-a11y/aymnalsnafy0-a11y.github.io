@@ -75,7 +75,7 @@
   /* ---------- الواجهة ---------- */
   let root, body, tabsEl, cur = 'ini', auto = 0;
   function build(){
-    root = document.createElement('div'); root.className = 'py-app'; root.hidden = true; root.dir = 'rtl';
+    root = document.createElement('div'); root.className = 'py-app'; root.hidden = true; root.dir = document.documentElement.dir;
     root.innerHTML = `<header><button class="py-back" aria-label="رجوع">‹</button><b>🔤 البينيين والنغمات</b><span></span></header>
       <div class="py-tabs" role="tablist">
         <button data-t="ini">الحروف الأولى<small>声母</small></button><button data-t="fin">النهايات<small>韵母</small></button>

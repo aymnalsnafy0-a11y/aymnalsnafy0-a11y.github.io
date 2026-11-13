@@ -65,7 +65,7 @@
   /* ---------- الحالة ---------- */
   let X = null; // {mode, qs, answers, i, phase, readLeft, timer, audio, playing}
   const root = document.createElement('div');
-  root.id = 'hskExam'; root.className = 'hx'; root.hidden = true; root.dir = 'rtl';
+  root.id = 'hskExam'; root.className = 'hx'; root.hidden = true; root.dir = document.documentElement.dir;
   root.setAttribute('role','dialog'); root.setAttribute('aria-label','محاكي امتحان HSK 1');
   document.body.appendChild(root);
 

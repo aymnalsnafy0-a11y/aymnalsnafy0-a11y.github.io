@@ -46,7 +46,7 @@
   function missingFor(lessons){
     const zh = new Map(), ar = new Map();
     const addZh = t => { const k = NORM(t); if(k && /[一-鿿]/.test(k) && !hasAudio('zh', t) && !zh.has(k)) zh.set(k, String(t)); };
-    const addAr = t => { if(t && !hasAudio('ar', t) && !ar.has(t)) ar.set(t, String(t)); };
+    const addAr = t => { if(SITE_LANG === 'ar' && t && !hasAudio('ar', t) && !ar.has(t)) ar.set(t, String(t)); };
     lessons.forEach(L => {
       (L.words || []).forEach(w => { addZh(speakHz(w)); w.ch.forEach(c => addZh(c[0])); addAr(w.m); });
       Object.keys(L.sents || {}).forEach(k => { const s = L.sents[k]; addZh(sentHz(k, L.sents)); s.t.forEach(t => addZh(t[0])); addAr(s.ar); });

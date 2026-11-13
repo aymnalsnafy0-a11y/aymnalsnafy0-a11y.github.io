@@ -6,6 +6,8 @@
 <meta name="theme-color" content="#1f5f9e">
 <meta name="author" content="أيمن السنافي (aymnalsnafy0-a11y)">
 <meta name="copyright" content="© 2026 أيمن السنافي — جميع الحقوق محفوظة">
+<link rel="alternate" hreflang="ar" href="https://aymnalsnafy0-a11y.github.io/">
+<link rel="alternate" hreflang="en" href="https://aymnalsnafy0-a11y.github.io/en/">
 <link rel="canonical" href="https://aymnalsnafy0-a11y.github.io/">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -14,6 +16,8 @@
 <meta name="apple-mobile-web-app-title" content="دروس الصينية">
 <title>دروس الصينية التفاعلية</title>
 <script>
+const SITE_LANG = document.documentElement.lang;
+const MEANING_LANG = { ar: 'ar-SA', en: 'en-US', fr: 'fr-FR' }[SITE_LANG];
 /* حارس مبكّر (أسلوب قديم ليعمل على أي متصفح): يلتقط الأخطاء ويعرضها بدل أن يبقى المستخدم بلا تفسير */
 window.__errs=[];window.addEventListener('error',function(e){window.__errs.push((e.message||'error')+' @'+String(e.filename||'').split('/').pop()+':'+(e.lineno||''));});
 window.addEventListener('load',function(){setTimeout(function(){if(typeof window.go==='function')return;var d=document.createElement('div');d.style.cssText='position:fixed;left:10px;right:10px;top:10px;z-index:99999;background:#fff;border:2px solid #a8393c;border-radius:14px;padding:12px;font:15px/1.7 Tahoma,Arial;direction:rtl;color:#222;box-shadow:0 8px 30px rgba(0,0,0,.25)';d.innerHTML='<b>تعذّر تشغيل التطبيق على هذا المتصفح</b><br>جرّب تحديث المتصفح أو فتح الموقع في Chrome.<br><a href="test.html" style="color:#1f5f9e;font-weight:bold">🔧 افتح صفحة الفحص والإصلاح</a><div style="direction:ltr;text-align:left;font-size:11px;color:#777;word-break:break-all;margin-top:6px">'+(window.__errs.slice(0,3).join('<br>')||'no error captured')+'<br>'+navigator.userAgent+'</div>';document.body.appendChild(d);},4000);});
@@ -338,7 +342,7 @@ window.addEventListener('load',function(){setTimeout(function(){if(typeof window
 <link rel="stylesheet" href="hsk-exam.css?v=64">
 <link rel="stylesheet" href="voice.css?v=64">
 <link rel="stylesheet" href="practice.css?v=64">
-<link rel="stylesheet" href="ui.css?v=65">
+<link rel="stylesheet" href="ui.css?v=66">
 <link rel="stylesheet" href="lookup.css?v=64">
 </head>
 <body>
@@ -352,7 +356,7 @@ window.addEventListener('load',function(){setTimeout(function(){if(typeof window
 (function(){
   window.__fatal = function(msg){
     var d = document.getElementById('fatal'); if(!d) return;
-    d.style.cssText = 'display:block;margin:12px;padding:12px;border-radius:12px;background:#fdedee;border:1px solid #f2cdcf;color:#7d2a2d;font:14px Segoe UI,Tahoma,sans-serif;line-height:1.9;direction:rtl';
+    d.style.cssText = 'display:block;margin:12px;padding:12px;border-radius:12px;background:#fdedee;border:1px solid #f2cdcf;color:#7d2a2d;font:14px Segoe UI,Tahoma,sans-serif;line-height:1.9';
     d.innerHTML = '<b>حدث خطأ أثناء تشغيل التطبيق</b>'
       + '<div style="font-size:12.5px">حدّث الصفحة مرة واحدة. إذا تكرر الخطأ، أرسل صورة لهذه الرسالة حتى نصلحه.</div>'
       + '<div style="font-size:11px;opacity:.75;margin-top:6px;direction:ltr;text-align:left">' + msg + '</div>';
@@ -374,6 +378,7 @@ window.addEventListener('load',function(){setTimeout(function(){if(typeof window
     <div class="clock" id="clock" title="توقيت مكة المكرمة" aria-label="الوقت بتوقيت مكة"></div>
     <button class="iconbtn" id="btnSet" title="الإعدادات" aria-label="الإعدادات">⚙</button>
   </div>
+  <!-- language-menu --><div class="site-language" role="group" aria-label="لغة الموقع"><a href="/" lang="ar" hreflang="ar" aria-current="page">العربية</a><a href="/en/" lang="en" hreflang="en">English</a></div><!-- /language-menu -->
   <div class="bar" title="تقدّمك في الدرس"><i id="barFill"></i></div>
   <div class="barlbl" hidden><span id="barTxt">—</span><span id="barPct">0%</span></div>
   <div hidden><span id="alwaysKnown"></span><span id="alwaysQuiz"></span></div>
@@ -705,7 +710,7 @@ var HanziWriter=function(){"use strict";var t,e,r;const i="undefined"==typeof wi
 </script>
 <script src="audio-index.js?v=b1793509087"></script>
 <script src="lessons-extra.js?v=pruned1"></script>
-<script src="hsk3-lessons.js?v=2"></script>
+<script src="hsk3-lessons.js?v=3"></script>
 <script src="hz-data.js?v=64" defer></script>
 
 <script>
@@ -1557,10 +1562,18 @@ function markNeuralVoices(){
     document.querySelectorAll(sel+' .btn').forEach(b=>b.classList.toggle('g', b.dataset.g===g));
   });
 }
+function meaningVoice(g) {
+  if (!('speechSynthesis' in window)) return null;
+  const voices = speechSynthesis.getVoices().filter(v => v.lang.toLowerCase().split(/[-_]/)[0] === SITE_LANG);
+  const preferred = {en: {f: /zira|jenny|samantha/i, m: /david|guy|daniel/i},
+    fr: {f: /hortense|denise|amélie/i, m: /paul|henri|thomas/i}}[SITE_LANG]?.[g];
+  return voices.find(v => preferred?.test(v.name)) || voices.find(v => v.lang === MEANING_LANG) || voices[0] || null;
+}
 function setNeuralVoice(lang, g){
   if(lang==='zh') state.set.zhVoice = g; else state.set.arVoice = g;
   save(); markNeuralVoices();
   if(lang==='zh') speak('认识你很高兴');
+  else if(SITE_LANG !== 'ar') playText(SITE_LANG === 'fr' ? 'Bonjour' : 'Hello', SITE_LANG, 0.9, g);
   else { const a = new Audio(neuralSrc('ar', 'مرحبًا') || neuralSrc('ar', Object.keys(window.AUDIO_INDEX.ar)[0])); a.play().catch(()=>{}); }
 }
 /* تشغيل نص صيني أو عربي بأفضل صوت متاح ويعيد Promise عند الانتهاء (للاختبار والإملاء) */
@@ -1577,8 +1590,9 @@ function playText(text, lang, rate, g){
     if(!('speechSynthesis' in window)) return res();
     stopChineseAudio();
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = lang==='ar' ? 'ar-SA' : 'zh-CN'; u.rate = rate || 0.9;
-    if(lang!=='ar' && zhVoice) u.voice = zhVoice;
+    u.lang = lang==='zh' || !lang ? 'zh-CN' : MEANING_LANG; u.rate = rate || 0.9;
+    const voice = lang==='zh' || !lang ? zhVoice : meaningVoice(g || state.set.arVoice);
+    if(voice) u.voice = voice;
     u.onend = u.onerror = ()=>res();
     try{ speechSynthesis.speak(u); }catch(e){ res(); }
   });
@@ -1589,17 +1603,13 @@ function speak(text, rate, repeat){
   const failed=()=>{if(generation!==audioGeneration)return;stopChineseAudio();toast('تعذّر تشغيل الصوت. اضغط النطق للمحاولة مجددًا.');};
   const currentWord=typeof vList!=='undefined' && vList[vPos];
   const meaning=state.set.repeatMeaning && currentWord && speakHz(currentWord)===text ? currentWord.m : '';
-  let arabicVoice=null;
-  if(meaning){
-    if('speechSynthesis' in window)arabicVoice=speechSynthesis.getVoices().find(v=>/^ar([_-]|$)/i.test(v.lang));
-    // Built-in Arabic recordings work even when the device has no Arabic voice.
-  }
+  const translationVoice = meaning ? meaningVoice(state.set.arVoice) : null;
   const scheduleNext=()=>{if(repeat && generation===audioGeneration)repeatTimer=setTimeout(()=>{if(generation===audioGeneration)speak(text,undefined,true);},500);};
   const afterChinese=()=>{
     if(generation!==audioGeneration)return;
     if(!meaning){scheduleNext();return;}
-    const arSrc=neuralSrc('ar',meaning);
-    const arabicClip=arSrc?null:window.ARABIC_AUDIO?.[meaning];
+    const arSrc=SITE_LANG==='ar' ? neuralSrc('ar',meaning) : '';
+    const arabicClip=SITE_LANG==='ar' && !arSrc ? window.ARABIC_AUDIO?.[meaning] : null;
     if(arSrc||arabicClip){
       const arPlayer=new Audio(arSrc||('data:audio/wav;base64,'+arabicClip));
       lessonAudioPlayer=arPlayer;
@@ -1609,7 +1619,7 @@ function speak(text, rate, repeat){
     }
     if(!('speechSynthesis' in window)){failed();return;}
     const ar=new SpeechSynthesisUtterance(meaning);
-    ar.lang=arabicVoice?.lang||'ar-SA';if(arabicVoice)ar.voice=arabicVoice;ar.rate=Number(state.set.rate)||0.8;
+    ar.lang=translationVoice?.lang||MEANING_LANG;if(translationVoice)ar.voice=translationVoice;ar.rate=Number(state.set.rate)||0.8;
     ar.onend=scheduleNext;ar.onerror=failed;
     try{speechSynthesis.speak(ar);}catch(e){failed();}
   };
@@ -1948,7 +1958,7 @@ function paintGroups(){
 function toggleGroupDone(){
   const g = curGroup(); if(!g) return; const dm = grpDoneMap();
   if(dm[g]){ delete dm[g]; save(); paintGroups(); toast('أُلغيت علامة «تم»'); return; }
-  dm[g] = new Date().toLocaleDateString('ar-SA-u-ca-gregory', {day:'numeric', month:'short'}); save(); paintGroups();
+  dm[g] = new Date().toLocaleDateString(MEANING_LANG + '-u-ca-gregory', {day:'numeric', month:'short'}); save(); paintGroups();
   try{ window.SFX && SFX.play('finish'); }catch(e){}
   try{ window.tutorSay && tutorSay('good', '<b>أحسنت! أنهيت «' + esc(GROUPS[g]) + '» 🎉</b><small>راجعه بكرة مرة سريعة عشان ما تنساه</small>', {force: true}); }catch(e){}
   const keys = Object.keys(GROUPS).filter(k => W.some(w => String(w.g) === k));
@@ -2571,6 +2581,8 @@ const T_STOP = ['ما','ماهو','ماهي','معني','وش','ايش','شنو'
   'القاعده','ليش','لماذا','متي','استخدم','ايه','ال','مع','الي','ان','انا'];
 
 function arNorm(s){
+  if (SITE_LANG !== 'ar') return String(s ?? '').toLowerCase().normalize('NFD')
+    .replace(/\p{M}/gu, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
   return String(s == null ? '' : s).toLowerCase()
     .replace(AR_DIA, '')
     .replace(/[أإآٱ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه')
@@ -2586,7 +2598,9 @@ function pyFold(s){
 const hasHz = s => /[一-鿿]/.test(String(s || ''));
 const onlyHz = s => (String(s || '').match(/[一-鿿]/g) || []).join('');
 function arTokens(s){
-  return arNorm(s).split(' ').filter(function(t){ return t.length >= 2 && T_STOP.indexOf(t) < 0; });
+  const stop = SITE_LANG === 'fr' ? ['le','la','les','de','des','du','un','une','en','chinois','comment','dire','signifie','exemple','phrase','entre','et','que','est','ce','quoi','mot'] :
+    SITE_LANG === 'en' ? ['a','an','the','of','to','in','chinese','what','does','mean','how','say','example','sentence','between','and','is','do','word'] : T_STOP;
+  return arNorm(s).split(' ').filter(t => t.length >= 2 && !stop.includes(t));
 }
 
 /* ---------- الفهرس ---------- */
@@ -2725,6 +2739,20 @@ function tChips(list){
 
 /* ---------- النوايا ---------- */
 function tutorIntent(s){
+  if(SITE_LANG !== 'ar'){
+    const patterns = SITE_LANG === 'fr' ? {
+      drill: /\b(quiz|teste|test|exercice|entraine)\b/, plan: /\b(aujourd hui|plan|revision)\b/,
+      diff: /\bdifference\b/, howsay: /\b(comment (dire|dit|demander)|traduis|traduire)\b/,
+      write: /\b(ecrire|ecriture|tracer|traits)\b/, grammar: /\b(regle|grammaire|explique|pourquoi)\b/,
+      sentences: /\b(exemple|exemples|phrase|phrases)\b/, help: /\b(aide|aider)\b/
+    } : {
+      drill: /\b(quiz|test me|practice|exercise)\b/, plan: /\b(today|plan|review)\b/,
+      diff: /\b(difference|versus|vs)\b/, howsay: /\b(how (do i|to) say|translate)\b/,
+      write: /\b(write|writing|strokes|draw)\b/, grammar: /\b(rule|grammar|explain|why)\b/,
+      sentences: /\b(examples?|sentences?)\b/, help: /\b(help|what can you do)\b/
+    };
+    return Object.keys(patterns).find(intent => patterns[intent].test(s)) || 'lookup';
+  }
   if(/اختبرني|اختبار|تمرين|دربني|درب ني|مرني|كويز/.test(s)) return 'drill';
   if(/اذاكر|المستحق|مراجعه اليوم|ابدا|خطه|اليوم/.test(s)) return 'plan';
   if(/الفرق|فرق بين|مقابل/.test(s)) return 'diff';

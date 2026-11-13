@@ -294,3 +294,12 @@ body.py-open{overflow:hidden}
   .vlayout > .card{margin:0}
   .vlist{position:sticky;top:96px;max-height:calc(100vh - 200px);overflow-y:auto}
 }}
+
+/* Site language navigation and reading direction. */
+.site-language{display:flex;justify-content:center;gap:6px;padding:4px 0;flex-wrap:wrap}
+.site-language a{padding:4px 10px;border:1px solid currentColor;border-radius:999px;color:inherit;font-size:.82rem;text-decoration:none}
+.site-language a[aria-current]{font-weight:700;background:var(--blue-bg,#eef5fc);color:var(--blue,#245da8)}
+.site-language a:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+html[dir=ltr] :is(.tok .ar,.lk-ch small,.pron-syl .heard,.pron-syl small,.exar,.tar){direction:ltr}
+html[dir=ltr] :is(.trick,.qask,.bubble,.tk-answer){text-align:start}
+body:has(.modal.on) .av-bubble,body:has(.hx:not([hidden])) .av-bubble{pointer-events:none}

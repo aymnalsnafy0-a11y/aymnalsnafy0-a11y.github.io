@@ -1,0 +1,229 @@
+/* المعلّم بشكل شخصية: صورة كاملة في زاوية الشاشة، تتغيّر تعابيرها وتطلع منه رسائل تشجيع وتوضيح */
+(function(){
+  'use strict';
+  const IMG = {full: 'tutor/toon.webp', mini: 'tutor/toon-face.webp'};
+  Object.values(IMG).forEach(src => { const i = new Image(); i.src = src; });   // تحميل مسبق
+
+  const GOOD = ["Well done! 👏", "Excellent, complete this! 💪", "Bravo to you 🎉", "That's right! You are progressing quickly", "很好 hěn hǎo — Excellent!", "Smart answer 👌", "This is it! 🔥"];
+  const STREAK = ["Three correct ones, one after the other! 🔥", "God willing, and there is no mistake! 🌟", "You are fire today 🔥🔥"];
+  const BAD = ["Never mind, we learn from mistakes 🙂", "Close! Focus a little", "No problem, try again"];
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  const strip = h => { const d = document.createElement('div'); d.innerHTML = h; return (d.textContent || '').replace(/\s+/g, ' ').trim(); };
+
+  let fab, img, bubble, hideT, backT, streak = 0, lastAt = 0, quiet = 0;
+  const mute = (fn, self, args) => { quiet++; try{ return fn.apply(self, args); } finally { quiet--; } };
+  // الوضع: full = الشخصية كاملة، mini = وجه صغير، off = زر 💬 عادي
+  const mode = () => { if(typeof state === 'undefined' || !state.set) return 'full'; if(state.set.avatarOff){ state.set.avatarMode = 'off'; delete state.set.avatarOff; } return state.set.avatarMode || 'full'; };
+  const on = () => mode() !== 'off';
+  const talk = () => on() && !(typeof state !== 'undefined' && state.set && state.set.avatarQuiet);
+
+  function build(){
+    fab = document.querySelector('.fab'); if(!fab) return false;
+    bubble = document.createElement('div'); bubble.className = 'av-bubble'; bubble.hidden = true;
+    bubble.addEventListener('click', () => hide());
+    document.body.appendChild(bubble);
+    apply();
+    return true;
+  }
+  function setMode(m){ state.set.avatarMode = m; save(); apply(); paintSet(); }
+  function apply(){
+    if(!fab) return;
+    const m = mode();
+    fab.classList.remove('av-fab', 'av-full', 'av-mini');
+    img = null; fab.textContent = '';
+    if(m === 'off'){ fab.textContent = '💬'; hide(); window.dispatchEvent(new Event('resize')); return; }
+    fab.classList.add('av-fab', 'av-' + m);
+    img = document.createElement('img'); img.alt = "Tutor"; img.src = IMG[m]; img.draggable = false;
+    fab.appendChild(img);
+    // زر التصغير/التكبير فوق الشخصية
+    const t = document.createElement('span'); t.className = 'av-tog'; t.setAttribute('role', 'button');
+    t.title = m === 'full' ? "Minimizing the teacher" : "Show the full parameter"; t.textContent = m === 'full' ? '–' : '+';
+    ['pointerdown', 'pointerup', 'mousedown', 'touchstart'].forEach(ev => t.addEventListener(ev, e => e.stopPropagation(), {passive: true}));
+    t.addEventListener('click', e => { e.stopPropagation(); e.preventDefault(); setMode(m === 'full' ? 'mini' : 'full'); if(m === 'full') toast("You minimized the feature — press + to return it, or ⚙ to hide it completely"); });
+    fab.appendChild(t);
+    fab.title = "Click to ask the teacher · Drag me anywhere";
+    img.addEventListener('load', () => window.dispatchEvent(new Event('resize')), {once: true});
+  }
+  function place(){
+    if(bubble.hidden) return;
+    const r = fab.getBoundingClientRect(), bw = bubble.offsetWidth, bh = bubble.offsetHeight;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    // فوق رأس الشخصية، وإن ما في مكان فبجانبه
+    let x = r.left + r.width / 2 - bw / 2, y = r.top - bh - 10, below = false;
+    if(y < 8){ y = Math.min(vh - bh - 8, r.top + 10); x = r.left > vw / 2 ? r.left - bw - 10 : r.right + 10; below = true; }
+    x = Math.max(8, Math.min(vw - bw - 8, x));
+    bubble.style.left = x + 'px'; bubble.style.top = y + 'px';
+    bubble.classList.toggle('side', below);
+    const tail = Math.max(14, Math.min(bw - 14, r.left + r.width / 2 - x));
+    bubble.style.setProperty('--tail', tail + 'px');
+  }
+  function hide(){ if(bubble){ bubble.hidden = true; bubble.classList.remove('show'); } }
+  function face(kind, ms){
+    if(!img) return;
+    clearTimeout(backT);
+    fab.classList.remove('av-good', 'av-bad', 'av-hi', 'av-info'); void fab.offsetWidth;
+    fab.classList.add('av-' + kind);
+    backT = setTimeout(() => fab.classList.remove('av-' + kind), 1600);
+  }
+  // kind: good | bad | info | hi
+  function say(kind, html, opts){
+    opts = opts || {};
+    if(!talk() || !fab || !bubble) return;
+    const t = Date.now();
+    if(!opts.force && t - lastAt < 900) return;   // لا نغرق الشاشة بالرسائل
+    lastAt = t;
+    const ms = opts.ms || Math.min(9000, 3200 + strip(html).length * 55);
+    bubble.className = 'av-bubble ' + kind;
+    bubble.innerHTML = html;
+    bubble.hidden = false; place();
+    requestAnimationFrame(() => bubble.classList.add('show'));
+    face(kind, ms);
+    clearTimeout(hideT); hideT = setTimeout(hide, ms);
+  }
+  const sfx = n => { try{ window.SFX && SFX.play(n); }catch(e){} };
+  function good(extra){
+    streak++;
+    sfx(streak >= 3 && streak % 3 === 0 ? 'streak' : 'good');
+    const base = streak >= 3 && streak % 3 === 0 ? pick(STREAK) : pick(GOOD);
+    say('good', base + (extra ? '<small>' + extra + '</small>' : ''));
+  }
+  function bad(explain){
+    streak = 0; sfx('bad');
+    say('bad', '<b>' + pick(BAD) + '</b>' + (explain ? '<small>' + explain + '</small>' : ''), {force: true});
+  }
+
+  /* ---------- ربط الأحداث ---------- */
+  function hooks(){
+    // الاختبار
+    if(typeof resolveQ === 'function'){
+      const base = resolveQ;
+      resolveQ = window.resolveQ = function(ok, expl){
+        const q = quiz.qs[quiz.i], was = q && q.answered;
+        const r = mute(base, this, arguments);
+        if(q && !was){ ok ? good() : bad("The correct one: " + strip(expl)); }
+        return r;
+      };
+    }
+    if(typeof quizDone === 'function'){
+      const base = quizDone;
+      quizDone = window.quizDone = function(){
+        const s = quiz.score, t = quiz.qs.length, r = base.apply(this, arguments);
+        const pct = t ? Math.round(s / t * 100) : 0;
+        sfx(pct >= 70 ? 'finish' : 'fail');
+        setTimeout(() => say(pct >= 70 ? 'good' : 'info', pct >= 90 ? `<b>${s}/${t} — You are ready for the next lesson 🎉</b>` : pct >= 70 ? `<b>${s}/${t} — Excellent!</b><small>Check the few errors and you will be complete</small>` : `<b>${s}/${t}</b><small>Do not be discouraged, review the words you made wrong and repeat the test - I am with you 💪</small>`, {force: true, ms: 7000}), 300);
+        return r;
+      };
+    }
+    // ترتيب الجملة في صفحة القواعد
+    if(typeof checkOrder === 'function'){
+      const base = checkOrder;
+      checkOrder = window.checkOrder = function(pid, sk){
+        let built = null, right = null;
+        try{
+          if(ORD[pid].length >= S[sk].t.length){
+            built = ORD[pid].map(j => S[sk].t[j][0]); right = S[sk].t.map(t => t[0]);
+          }
+        }catch(e){}
+        const r = mute(base, this, arguments);
+        if(built){
+          if(built.join('|') === right.join('|')) good('<span class="hz">' + right.join('') + '</span>');
+          else {
+            const pat = (typeof PATTERNS !== 'undefined' && PATTERNS || []).find(p => p.id === pid || p.drill === sk);
+            let where = built.findIndex((w, i) => w !== right[i]);
+            bad("The correct one: <bdi dir=\"ltr\" class=\"hz\">" + right.join(' ') + '</bdi>'
+              + (where >= 0 ? "<br>First error: word number " + (where + 1) + " It must be <span class=\"hz\">" + right[where] + '</span>' : '')
+              + (pat && pat.f ? "<br>Rule: " + pat.f : "<br>Remember: the subject, then the verb, then the remainder"));
+          }
+        }
+        return r;
+      };
+    }
+    // أي رسالة صح/خطأ أخرى في التطبيق
+    if(typeof toast === 'function'){
+      const base = toast;
+      toast = window.toast = function(m){
+        const r = base.apply(this, arguments);
+        if(quiet) return r;
+        try{
+          const t = String(m || '');
+          if(/^✓\s*(صحيح|أحسنت|ممتاز)/.test(t)) good();
+          else if(/غير صحيح|^✗|خطأ —/.test(t)) bad(t.replace(/^✗\s*/, ''));
+        }catch(e){}
+        return r;
+      };
+    }
+    // بطاقات المفردات
+    if(typeof gradeCur === 'function'){
+      const base = gradeCur;
+      gradeCur = window.gradeCur = function(g){ const r = base.apply(this, arguments); if(g){ if(Math.random() < .45) good(); } else say('info', "<b>Okay, I will get back to you soon 🔁</b><small>Hear it twice and say it out loud</small>"); return r; };
+    }
+    // الكتابة بالإصبع (كل أنواعها)
+    if(typeof HanziWriter !== 'undefined' && !HanziWriter.__av){
+      HanziWriter.__av = true;
+      const create = HanziWriter.create;
+      HanziWriter.create = function(){
+        const w = create.apply(this, arguments), quiz = w.quiz.bind(w);
+        w.quiz = function(o){
+          o = o || {}; const om = o.onMistake, oc = o.onComplete; let warned = -1;
+          return quiz(Object.assign({}, o, {
+            onCorrectStroke(){ sfx('stroke'); return o.onCorrectStroke && o.onCorrectStroke.apply(this, arguments); },
+            onMistake(d){ try{ if(d.mistakesOnStroke === 2 && warned !== d.strokeNum){ sfx('bad'); warned = d.strokeNum; say('bad', "<b>Pay attention to the direction of the line 👀</b><small>Line No " + (d.strokeNum + 1) + " — Start it from the right place, and the hint will come to you</small>"); } }catch(e){} return om && om.apply(this, arguments); },
+            onComplete(d){ try{ d.totalMistakes === 0 ? good("I wrote it without a mistake") : say('info', "<b>Written by ✓</b><small>You have it " + d.totalMistakes + " Mistakes - next time without them 💪</small>"); }catch(e){} return oc && oc.apply(this, arguments); }
+          }));
+        };
+        return w;
+      };
+    }
+    // النطق والإملاء: نراقب النتائج حين تظهر
+    new MutationObserver(list => {
+      for(const m of list) for(const n of m.addedNodes){
+        if(n.nodeType !== 1) continue;
+        const pr = n.matches('.pron-res') ? n : n.querySelector && n.querySelector('.pron-res');
+        if(pr){
+          const sc = parseInt((pr.querySelector('.pron-score') || {}).textContent, 10);
+          if(!isNaN(sc)){
+            const tip = pr.querySelector('.pron-syl .no small');
+            sc >= 85 ? good("Your pronunciation " + sc + '/100 🎤') : sc >= 60 ? say('info', "<b>Close! " + sc + '/100</b><small>' + (tip ? tip.textContent : "Listen to the correct pronunciation and imitate it") + '</small>') : bad((tip ? tip.textContent + ' — ' : '') + "Listen to the correct pronunciation, then try again");
+          }
+        }
+        const dict = n.closest && n.closest('#dictBody');
+        if(dict){
+          const res = dict.querySelector('.note.g > b, .note.r > b');
+          if(res && !res.__av){ res.__av = true; res.closest('.note.g') ? good() : bad("Listen to it slowly 🐢 and focus on the notes"); }
+        }
+      }
+    }).observe(document.body, {childList: true, subtree: true});
+    window.addEventListener('resize', place);
+    document.addEventListener('pointerup', () => setTimeout(place, 0));
+  }
+
+  /* ---------- إعداد التشغيل والإيقاف ---------- */
+  let paintSet = () => {};
+  function settings(){
+    const set = document.querySelector('#mdSet .sheet'); if(!set || document.getElementById('avRow')) return;
+    const anchor = [...set.querySelectorAll('p')].find(p => p.textContent.includes("The smart teacher"));
+    const box = document.createElement('div'); box.id = 'avRow';
+    box.innerHTML = `<p style=\"margin:2px 0 4px\"><b>The form of the teacher</b> <span class=\"sml muted\">(The character encourages you and explains your mistakes)</span></p>\n      <div class=\"row eq\" style=\"margin-bottom:6px\"><button class=\"btn sm\" data-av=\"full\">🧑‍🏫 Complete</button><button class=\"btn o sm\" data-av=\"mini\">🙂 Small face</button><button class=\"btn o sm\" data-av=\"off\">🙈 Hide</button></div>\n      <label class=\"sml\" style=\"display:flex;gap:8px;align-items:center;margin-bottom:12px\"><input type=\"checkbox\" id=\"avQuiet\"> Stop messages of encouragement and correction</label>`;
+    anchor ? set.insertBefore(box, anchor) : set.appendChild(box);
+    paintSet = () => { box.querySelectorAll('[data-av]').forEach(b => b.classList.toggle('o', b.dataset.av !== mode())); box.querySelector('#avQuiet').checked = !!state.set.avatarQuiet; };
+    box.addEventListener('click', ev => {
+      const b = ev.target.closest('[data-av]'); if(!b) return;
+      setMode(b.dataset.av);
+      if(on()) say('hi', "<b>Hello! I'm back 👋</b>", {force: true});
+    });
+    box.querySelector('#avQuiet').onchange = e => { state.set.avatarQuiet = e.target.checked; save(); if(e.target.checked) hide(); };
+    paintSet();
+  }
+
+  function init(){
+    if(typeof state === 'undefined' || !document.querySelector('.fab') || typeof resolveQ !== 'function') return setTimeout(init, 200);
+    if(!build()) return;
+    hooks(); settings();
+    window.tutorSay = say; window.tutorGood = good; window.tutorBad = bad;
+    if(on() && !sessionStorage.getItem('avHi')){
+      try{ sessionStorage.setItem('avHi', '1'); }catch(e){}
+      setTimeout(() => say('hi', "<b>Hello! I am your teacher 👋</b><small>I encourage you and point out your mistakes. Click me for any question, drag me anywhere.</small>", {force: true, ms: 7000}), 1600);
+    }
+  }
+  init();
+})();

@@ -66,7 +66,7 @@
 
   /* ---------- النافذة ---------- */
   const pop = document.createElement('div');
-  pop.className = 'lk-pop'; pop.hidden = true; pop.dir = 'rtl'; pop.setAttribute('role', 'dialog');
+  pop.className = 'lk-pop'; pop.hidden = true; pop.dir = document.documentElement.dir; pop.setAttribute('role', 'dialog');
   document.body.appendChild(pop);
   function close(){ pop.hidden = true; }
   function charsInfo(hz){
