@@ -7120,5 +7120,17 @@
   "انتقل إلى المترو في المحطة القادمة من فضلك.": "Please transfer to the subway at the next stop.",
   "سيُعقد اجتماع الغد عبر الإنترنت.": "Tomorrow’s meeting will be held online.",
   "حضوريّ": "in person",
-  "سنشارك يوم الجمعة في فعالية حضورية.": "We are attending an in-person event on Friday."
+  "سنشارك يوم الجمعة في فعالية حضورية.": "We are attending an in-person event on Friday.",
+  "الصق مفتاح Gemini أولًا.": "Paste your Gemini API key first.",
+  "تعذّر حفظ المفتاح في هذا المتصفح.": "This browser could not save the key.",
+  "جارٍ اختبار رد فعلي من Gemini…": "Testing a live Gemini response…",
+  "نجح الاختبار وردّ Gemini. يمكنك الآن استخدام المعلم.": "Gemini replied successfully. You can now use the tutor.",
+  "رفضت Google المفتاح. تحقّق منه في Google AI Studio.": "Google rejected this key. Check it in Google AI Studio.",
+  "مشروع Google لا يملك صلاحية توليد الردود. راجع حالة المشروع والفوترة في Google AI Studio.": "Your Google project cannot generate responses. Check its status and billing in Google AI Studio.",
+  "بلغ المشروع حد الاستخدام لدى Google. راجع حصة المشروع في Google AI Studio.": "The project reached a Google usage limit. Check your quota in Google AI Studio.",
+  "لم يتوفر نموذج صالح لهذا المشروع.": "No compatible model is available for this project.",
+  "تعذّر الاتصال بخدمة Google من هذا المتصفح.": "This browser could not reach Google.",
+  "لم يصل رد من Google خلال مهلة الاختبار.": "Google did not respond before the test timed out.",
+  "لم ينجح اختبار Gemini.": "The Gemini test failed.",
+  "راجع صلاحية مشروع Gemini في Google AI Studio.": "Check your Gemini project access in Google AI Studio."
 }

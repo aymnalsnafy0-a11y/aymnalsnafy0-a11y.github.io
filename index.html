@@ -2988,7 +2988,18 @@ const AIKEY_LS = 'hsk_ai_key_v1';
 const AI_DAILY_CAP = 200;
 
 function aiKey(){ try{ return localStorage.getItem(AIKEY_LS) || ''; }catch(e){ return ''; } }
-function setAiKey(v){ try{ v ? localStorage.setItem(AIKEY_LS, v) : localStorage.removeItem(AIKEY_LS); }catch(e){} }
+function setAiKey(v){
+  if(v === aiKey()) return;
+  try{
+    if(v) localStorage.setItem(AIKEY_LS, v);
+    else localStorage.removeItem(AIKEY_LS);
+  }catch(e){ return; }
+  delete state.set.aiModels;
+  delete state.set.aiSpent;
+  delete state.set.aiBusy;
+  delete state.set.aiLastOk;
+  save();
+}
 function aiReady(){ return !!aiKey() && state.set.aiOn !== 0; }
 function aiModel(){ return state.set.aiModel || 'gemini-flash-latest'; }
 
@@ -3020,7 +3031,7 @@ const AI_PROVIDERS = {
       while(contents.length && contents[0].role === 'model') contents.shift();
       const gc = { temperature: opts.temp == null ? 0.4 : opts.temp, maxOutputTokens: opts.max || 700 };
       // نماذج 2.5 تفكّر داخل نفس مساحة الرد؛ في مهام الاستخراج نعطّل التفكير
-      if(opts.noThink) gc.thinkingConfig = { thinkingBudget: 0 };
+      if(opts.noThink && /^gemini-2\.5-/.test(opts.model || aiModel())) gc.thinkingConfig = { thinkingBudget: 0 };
       if(opts.schema){ gc.responseMimeType = 'application/json'; gc.responseSchema = opts.schema; }
       const req = { systemInstruction: sys ? { parts: [{ text: sys }] } : undefined, contents: contents, generationConfig: gc };
       if(opts.web && !opts.schema && state.set.aiWeb !== 0) req.tools = [{ google_search: {} }];
@@ -3051,7 +3062,8 @@ const AI_PROVIDERS = {
       }catch(e){ msg = String(body || '').slice(0, 140); }
       var e2;
       if(st === 429) e2 = AIErr('quota');
-      else if(st === 403 || (st === 400 && /API[_ ]?key|API_KEY_INVALID/i.test(body))) e2 = AIErr('badkey');
+      else if(st === 401 || /API_KEY_INVALID|API key not valid|API key was reported as leaked/i.test(msg + ' ' + body)) e2 = AIErr('badkey');
+      else if(st === 403 || st === 402 || /FAILED_PRECONDITION/.test(body)) e2 = AIErr('access');
       else if(st === 404) e2 = AIErr('model');
       else e2 = AIErr('http');
       e2.detail = 'HTTP ' + st + (qid ? ' [' + qid.trim() + ']' : '') + (msg ? ' — ' + String(msg).slice(0, 180) : '');
@@ -3123,7 +3135,7 @@ function aiCall(userText, opts){
   const key = aiKey();
   if(!key) return Promise.reject(AIErr('nokey'));
   if(navigator.onLine === false) return Promise.reject(AIErr('offline'));
-  if(aiQuotaLeft() <= 0) return Promise.reject(AIErr('cap'));
+  if(!opts.probe && aiQuotaLeft() <= 0) return Promise.reject(AIErr('cap'));
 
   const turns = (opts.turns || aiTurns(8)).concat(opts.skipUser ? [] : [{ role: 'u', text: userText }]);
   const body = p.build(opts.system == null ? aiSystem() : opts.system, turns, opts.images, opts);
@@ -3135,7 +3147,7 @@ function aiCall(userText, opts){
   }).then(function(r){
     return r.text().then(function(txt){
       if(!r.ok) throw p.fail(r.status, txt);
-      aiCount();
+      if(!opts.probe) aiCount();
       const j = JSON.parse(txt);
       return { text: p.parse(j), srcs: (typeof aiSrcs === 'function' ? aiSrcs(j) : []) };
     });
@@ -3167,6 +3179,7 @@ function chatFmt(t){
 
 const AI_ERRS = {
   nokey:  'فعّل المعلّم الذكي أولًا من الإعدادات ⚙ ليجيب عن الأسئلة المفتوحة.',
+  access:'راجع صلاحية مشروع Gemini في Google AI Studio.',
   offline:'لا يوجد اتصال بالإنترنت الآن — هذه إجابتي من دروسك المحفوظة:',
   quota:  'رفضت جوجل الطلب لتجاوز حدّ (قد يكون حدّ الدقيقة أو حصّة اليوم — انظر السطر الإنجليزي). تتجدّد بعد منتصف الليل بتوقيت المحيط الهادئ، وأحيانًا يكفي الانتظار دقيقة. هذه إجابتي من دروسك:',
   cap:    'وصلت حدّ الاستخدام اليومي الذي ضبطناه للأمان. هذه إجابتي من دروسك:',
@@ -3292,41 +3305,34 @@ function aiPickModel(){
   const sel = document.getElementById('aiModelSel');
   if(sel){ state.set.aiModel = sel.value; save(); aiPaint(); }
 }
-function aiTest(){
+async function aiTest(){
   const out = document.getElementById('aiTest');
   const inp = document.getElementById('aiKeyIn');
-  const k = (inp ? inp.value : '').trim() || aiKey();
-  if(!k){ out.innerHTML = '<div class="note r"><b>الصق المفتاح أولًا</b></div>'; return; }
-  setAiKey(k); save();
-  out.innerHTML = '<div class="note b"><b>جارٍ الفحص…</b></div>';
-  fetch(AI_PROVIDERS.gemini.base + 'models', { headers: { 'x-goog-api-key': k } })
-    .then(function(r){ return r.text().then(function(t){ return { ok: r.ok, st: r.status, t: t }; }); })
-    .then(function(res){
-      if(!res.ok){
-        const e = AI_PROVIDERS.gemini.fail(res.st, res.t);
-        out.innerHTML = '<div class="note r"><b>لم ينجح</b>' + esc(AI_ERRS[e.code] || ('HTTP ' + res.st)) + '</div>';
-        return;
-      }
-      const j = JSON.parse(res.t);
-      const usable = (j.models || []).filter(function(m){
-        return (m.supportedGenerationMethods || []).indexOf('generateContent') >= 0 && /gemini/.test(m.name);
-      }).map(function(m){ return m.name.replace('models/', ''); });
-      const sel = document.getElementById('aiModelSel');
-      if(sel && usable.length){
-        sel.innerHTML = '';
-        usable.forEach(function(m){ const o = document.createElement('option'); o.value = m; o.textContent = m; sel.appendChild(o); });
-        const pref = usable.filter(function(m){ return m === 'gemini-flash-latest'; })[0]
-                  || usable.filter(function(m){ return /flash/.test(m) && !/lite/.test(m); })[0]
-                  || usable.filter(function(m){ return /flash/.test(m); })[0] || usable[0];
-        sel.value = pref; state.set.aiModel = pref;
-      }
-      if(state.set.aiOn === 0) state.set.aiOn = 1;
-      save(); aiPaint();
-      out.innerHTML = '<div class="note g"><b>المفتاح يعمل ✓</b>وجدت ' + usable.length + ' نموذجًا متاحًا، واخترت لك: <span class="ltr">' + esc(state.set.aiModel) + '</span>. جرّب الآن أي سؤال في تبويب المعلّم.</div>';
-    })
-    .catch(function(){
-      out.innerHTML = '<div class="note r"><b>تعذّر الاتصال</b>تأكد من الإنترنت ثم أعد المحاولة.</div>';
-    });
+  const key = (inp ? inp.value : '').trim() || aiKey();
+  if(!out) return;
+  if(!key){ out.textContent = 'الصق مفتاح Gemini أولًا.'; return; }
+  setAiKey(key);
+  if(aiKey() !== key){ out.textContent = 'تعذّر حفظ المفتاح في هذا المتصفح.'; return; }
+  out.textContent = 'جارٍ اختبار رد فعلي من Gemini…';
+  try {
+    await aiCall('Reply with OK.', { probe:true, turns:[], system:'', web:false, max:256, deadline:25000, timeout:12000 });
+    if(aiKey() !== key) return;
+    state.set.aiOn = 1;
+    if(state.set.aiLastOk) state.set.aiModel = state.set.aiLastOk;
+    save(); aiPaint();
+    out.textContent = 'نجح الاختبار وردّ Gemini. يمكنك الآن استخدام المعلم.';
+  } catch(e) {
+    if(aiKey() !== key) return;
+    const hint = {
+      badkey:'رفضت Google المفتاح. تحقّق منه في Google AI Studio.',
+      access:'مشروع Google لا يملك صلاحية توليد الردود. راجع حالة المشروع والفوترة في Google AI Studio.',
+      quota:'بلغ المشروع حد الاستخدام لدى Google. راجع حصة المشروع في Google AI Studio.',
+      model:'لم يتوفر نموذج صالح لهذا المشروع.',
+      offline:'تعذّر الاتصال بخدمة Google من هذا المتصفح.',
+      abort:'لم يصل رد من Google خلال مهلة الاختبار.'
+    };
+    out.textContent = (hint[e.code] || 'لم ينجح اختبار Gemini.') + (e.detail ? ' (' + String(e.detail).split(' — ')[0] + ')' : '');
+  }
 }
 
 /* ==========================================================================
@@ -3983,7 +3989,7 @@ function boot(){
 try{ boot(); }catch(e){ if(window.__fatal) window.__fatal('boot: ' + (e && e.message)); }
 </script>
 <script src="/personal-words.js?v=64"></script>
-<script src="/tutor-panel.js?v=64"></script>
+<script src="/tutor-panel.js?v=65"></script>
 <script src="/cloud-state.js?v=64"></script>
 <script src="/account.js?v=64"></script>
 <script src="hsk-data.js?v=64"></script>

@@ -152,7 +152,7 @@
   if(!state.set.aiModel||/^gemini-(1\.|2\.)/.test(state.set.aiModel)){state.set.aiModel='gemini-flash-latest';save();}
   /* الخطة المجانية: حدّ يومي صغير (≈20 طلبًا) لكل نموذج على حدة.
      لذلك نوزّع الطلبات على كل نماذج flash المتاحة للمفتاح، ونتخطّى أي نموذج استنفد حصته حتى نهاية اليوم. */
-  const BASE=['gemini-flash-latest','gemini-3.8-flash','gemini-3.7-flash','gemini-3.6-flash','gemini-3.5-flash','gemini-3-flash-preview','gemini-3.1-flash-lite','gemini-flash-lite-latest','gemini-3.5-flash-lite'];
+  const BASE=['gemini-flash-latest','gemini-flash-lite-latest'];
   const SKIP=/tts|image|live|transcribe|omni|robotics|computer|embedding|audio|native/;
   const ver=m=>{const v=(m.match(/(\d+(?:\.\d+)?)/)||[0,0])[1];return /latest/.test(m)?99:Number(v);};
   async function modelList(){
@@ -185,7 +185,7 @@
     const lite=m=>/lite/.test(m), now=Date.now();
     const pool=[state.set.aiLastOk,opts.model||aiModel(),...BASE.filter(m=>avail.includes(m)),...avail.slice().sort((x,y)=>ver(y)-ver(x))]
       .filter((m,i,arr)=>m&&arr.indexOf(m)===i&&(avail.includes(m)||BASE.includes(m)));
-    let models=pool.filter(m=>!lite(m)).concat(pool.filter(lite)).filter(m=>!spent()[m]);
+    let models=pool.filter(m=>!lite(m)).concat(pool.filter(lite)).filter(m=>opts.probe||!spent()[m]);
     const free=models.filter(m=>!(busy()[m]>now));
     models=free.length?free:models; // إن كانت كلها مزدحمة نجرّبها رغم ذلك
     if(!models.length){const e=AIErr('quota');e.detail='daily: all models';throw e;}
@@ -206,7 +206,7 @@
         if(state.set.aiLastOk!==model){state.set.aiLastOk=model;save();}
         return r;
       }catch(e){
-        if(e&&e.code==='http'&&/HTTP 400/.test(e.detail||'')&&!/API[_ ]?key/i.test(e.detail||'')){spent()[model]=1;save();throw e;}
+        if(e&&e.code==='http'&&/HTTP 400/.test(e.detail||'')) throw e;
         if(!retryable(e)){e.fatal=true;throw e;}
         if(e.code==='model'){spent()[model]=1;}
         else if(e.code==='quota'){if(isDaily(e))spent()[model]=1;else busy()[model]=Date.now()+60000;}

@@ -2920,7 +2920,18 @@ const AIKEY_LS = 'hsk_ai_key_v1';
 const AI_DAILY_CAP = 200;
 
 function aiKey(){ try{ return localStorage.getItem(AIKEY_LS) || ''; }catch(e){ return ''; } }
-function setAiKey(v){ try{ v ? localStorage.setItem(AIKEY_LS, v) : localStorage.removeItem(AIKEY_LS); }catch(e){} }
+function setAiKey(v){
+  if(v === aiKey()) return;
+  try{
+    if(v) localStorage.setItem(AIKEY_LS, v);
+    else localStorage.removeItem(AIKEY_LS);
+  }catch(e){ return; }
+  delete state.set.aiModels;
+  delete state.set.aiSpent;
+  delete state.set.aiBusy;
+  delete state.set.aiLastOk;
+  save();
+}
 function aiReady(){ return !!aiKey() && state.set.aiOn !== 0; }
 function aiModel(){ return state.set.aiModel || 'gemini-flash-latest'; }
 
@@ -2952,7 +2963,7 @@ const AI_PROVIDERS = {
       while(contents.length && contents[0].role === 'model') contents.shift();
       const gc = { temperature: opts.temp == null ? 0.4 : opts.temp, maxOutputTokens: opts.max || 700 };
       // نماذج 2.5 تفكّر داخل نفس مساحة الرد؛ في مهام الاستخراج نعطّل التفكير
-      if(opts.noThink) gc.thinkingConfig = { thinkingBudget: 0 };
+      if(opts.noThink && /^gemini-2\.5-/.test(opts.model || aiModel())) gc.thinkingConfig = { thinkingBudget: 0 };
       if(opts.schema){ gc.responseMimeType = 'application/json'; gc.responseSchema = opts.schema; }
       const req = { systemInstruction: sys ? { parts: [{ text: sys }] } : undefined, contents: contents, generationConfig: gc };
       if(opts.web && !opts.schema && state.set.aiWeb !== 0) req.tools = [{ google_search: {} }];
@@ -2983,7 +2994,8 @@ const AI_PROVIDERS = {
       }catch(e){ msg = String(body || '').slice(0, 140); }
       var e2;
       if(st === 429) e2 = AIErr('quota');
-      else if(st === 403 || (st === 400 && /API[_ ]?key|API_KEY_INVALID/i.test(body))) e2 = AIErr('badkey');
+      else if(st === 401 || /API_KEY_INVALID|API key not valid|API key was reported as leaked/i.test(msg + ' ' + body)) e2 = AIErr('badkey');
+      else if(st === 403 || st === 402 || /FAILED_PRECONDITION/.test(body)) e2 = AIErr('access');
       else if(st === 404) e2 = AIErr('model');
       else e2 = AIErr('http');
       e2.detail = 'HTTP ' + st + (qid ? ' [' + qid.trim() + ']' : '') + (msg ? ' — ' + String(msg).slice(0, 180) : '');
@@ -3055,7 +3067,7 @@ function aiCall(userText, opts){
   const key = aiKey();
   if(!key) return Promise.reject(AIErr('nokey'));
   if(navigator.onLine === false) return Promise.reject(AIErr('offline'));
-  if(aiQuotaLeft() <= 0) return Promise.reject(AIErr('cap'));
+  if(!opts.probe && aiQuotaLeft() <= 0) return Promise.reject(AIErr('cap'));
 
   const turns = (opts.turns || aiTurns(8)).concat(opts.skipUser ? [] : [{ role: 'u', text: userText }]);
   const body = p.build(opts.system == null ? aiSystem() : opts.system, turns, opts.images, opts);
@@ -3067,7 +3079,7 @@ function aiCall(userText, opts){
   }).then(function(r){
     return r.text().then(function(txt){
       if(!r.ok) throw p.fail(r.status, txt);
-      aiCount();
+      if(!opts.probe) aiCount();
       const j = JSON.parse(txt);
       return { text: p.parse(j), srcs: (typeof aiSrcs === 'function' ? aiSrcs(j) : []) };
     });
@@ -3099,6 +3111,7 @@ function chatFmt(t){
 
 const AI_ERRS = {
   nokey:  "Activate the smart tutor first from the settings ⚙ to answer open questions.",
+  access:"Check your Gemini project access in Google AI Studio.",
   offline:"No internet connection now — this is my answer from your saved lessons:",
   quota:  "Google rejected the request for exceeding a limit (which could be a minute limit or a day's quota — see the English line). They renew after midnight Pacific time, and sometimes just a minute is enough. This is my answer from your lessons:",
   cap:    "The daily usage limit we set for safety has been reached. This is my answer from your lessons:",
@@ -3224,41 +3237,34 @@ function aiPickModel(){
   const sel = document.getElementById('aiModelSel');
   if(sel){ state.set.aiModel = sel.value; save(); aiPaint(); }
 }
-function aiTest(){
+async function aiTest(){
   const out = document.getElementById('aiTest');
   const inp = document.getElementById('aiKeyIn');
-  const k = (inp ? inp.value : '').trim() || aiKey();
-  if(!k){ out.innerHTML = "<div class=\"note r\"><b>Paste the key first</b></div>"; return; }
-  setAiKey(k); save();
-  out.innerHTML = "<div class=\"note b\"><b>Checking in progress...</b></div>";
-  fetch(AI_PROVIDERS.gemini.base + 'models', { headers: { 'x-goog-api-key': k } })
-    .then(function(r){ return r.text().then(function(t){ return { ok: r.ok, st: r.status, t: t }; }); })
-    .then(function(res){
-      if(!res.ok){
-        const e = AI_PROVIDERS.gemini.fail(res.st, res.t);
-        out.innerHTML = "<div class=\"note r\"><b>He did not succeed</b>" + esc(AI_ERRS[e.code] || ('HTTP ' + res.st)) + '</div>';
-        return;
-      }
-      const j = JSON.parse(res.t);
-      const usable = (j.models || []).filter(function(m){
-        return (m.supportedGenerationMethods || []).indexOf('generateContent') >= 0 && /gemini/.test(m.name);
-      }).map(function(m){ return m.name.replace('models/', ''); });
-      const sel = document.getElementById('aiModelSel');
-      if(sel && usable.length){
-        sel.innerHTML = '';
-        usable.forEach(function(m){ const o = document.createElement('option'); o.value = m; o.textContent = m; sel.appendChild(o); });
-        const pref = usable.filter(function(m){ return m === 'gemini-flash-latest'; })[0]
-                  || usable.filter(function(m){ return /flash/.test(m) && !/lite/.test(m); })[0]
-                  || usable.filter(function(m){ return /flash/.test(m); })[0] || usable[0];
-        sel.value = pref; state.set.aiModel = pref;
-      }
-      if(state.set.aiOn === 0) state.set.aiOn = 1;
-      save(); aiPaint();
-      out.innerHTML = "<div class=\"note g\"><b>The key works ✓</b>found " + usable.length + " A model is available, and I chose for you: <span class=\"ltr\">" + esc(state.set.aiModel) + "</span>. Now try any question in the teacher tab.</div>";
-    })
-    .catch(function(){
-      out.innerHTML = "<div class=\"note r\"><b>Unable to connect</b>Check the Internet and try again.</div>";
-    });
+  const key = (inp ? inp.value : '').trim() || aiKey();
+  if(!out) return;
+  if(!key){ out.textContent = "Paste your Gemini API key first."; return; }
+  setAiKey(key);
+  if(aiKey() !== key){ out.textContent = "This browser could not save the key."; return; }
+  out.textContent = "Testing a live Gemini response…";
+  try {
+    await aiCall('Reply with OK.', { probe:true, turns:[], system:'', web:false, max:256, deadline:25000, timeout:12000 });
+    if(aiKey() !== key) return;
+    state.set.aiOn = 1;
+    if(state.set.aiLastOk) state.set.aiModel = state.set.aiLastOk;
+    save(); aiPaint();
+    out.textContent = "Gemini replied successfully. You can now use the tutor.";
+  } catch(e) {
+    if(aiKey() !== key) return;
+    const hint = {
+      badkey:"Google rejected this key. Check it in Google AI Studio.",
+      access:"Your Google project cannot generate responses. Check its status and billing in Google AI Studio.",
+      quota:"The project reached a Google usage limit. Check your quota in Google AI Studio.",
+      model:"No compatible model is available for this project.",
+      offline:"This browser could not reach Google.",
+      abort:"Google did not respond before the test timed out."
+    };
+    out.textContent = (hint[e.code] || "The Gemini test failed.") + (e.detail ? ' (' + String(e.detail).split(' — ')[0] + ')' : '');
+  }
 }
 
 /* ==========================================================================
@@ -3915,7 +3921,7 @@ function boot(){
 try{ boot(); }catch(e){ if(window.__fatal) window.__fatal('boot: ' + (e && e.message)); }
 </script>
 <script src="/en/personal-words.js?v=c3523e06221e"></script>
-<script src="/en/tutor-panel.js?v=f6b1e65fd311"></script>
+<script src="/en/tutor-panel.js?v=d34ffa1a6d65"></script>
 <script src="/cloud-state.js?v=64"></script>
 <script src="/en/account.js?v=01990218d16b"></script>
 <script src="/en/hsk-data.js?v=41b8cc57f355"></script>
