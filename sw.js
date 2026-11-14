@@ -1,4 +1,4 @@
-var CACHE = 'hsk-v83';
+var CACHE = 'hsk-v84';
 var PAGES = ['/', '/en/'];
 var DOCUMENTS = PAGES.flatMap(function(page){
   return [page, page + 'privacy.html'];
